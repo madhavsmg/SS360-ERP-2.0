@@ -12,7 +12,6 @@ export default function DashboardPage() {
     <section className="erp-page">
       <header className="erp-header">
         <div>
-          <span className="erp-kicker">SS-360 Control Room</span>
           <h1>Siva Sai Tea ERP</h1>
           <p>
             Supplier purchasing, raw stock, blending, sales, shipping, and profit stay connected
