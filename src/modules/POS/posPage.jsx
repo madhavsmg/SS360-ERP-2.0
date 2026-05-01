@@ -1,3 +1,5 @@
+import SalesPage from '../Sales/salesPage';
+
 export default function POSPage() {
-  return <h2>POS Module</h2>;
+  return <SalesPage />;
 }

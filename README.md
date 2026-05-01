@@ -1,105 +1,158 @@
 # 🧭 SS360 ERP 2.0
 
-**SS360 ERP 2.0** is a modern, business-specific ERP solution built for **Siva Sai Tea Enterprises**.  
-Designed with scalability and clarity in mind, this system manages the full tea supply chain — from supplier sourcing and inventory tracking to blending, sales, and analytics.
+**SS360 ERP 2.0** is a polished React prototype for **Siva Sai Tea Enterprises**. It brings the tea supply chain to life in a browser app, from supplier sourcing and warehouse stock to blending, sales, and shipping.
 
-![Vite + React](https://img.shields.io/badge/Vite-%5E4.0-blueviolet?style=flat-square&logo=vite&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node.js-%5E18.0-green?style=flat-square&logo=node.js&logoColor=white)
-![MongoDB](https://img.shields.io/badge/Database-MongoDB-green?style=flat-square&logo=mongodb)
-![License](https://img.shields.io/github/license/madhavsmg/ss360-erp-2.0)
-
----
-
-## 📆 Tech Stack
-
-| Frontend     | Backend           | Database | Tools & Infra          |
-| ------------ | ----------------- | -------- | ---------------------- |
-| React + Vite | Node.js + Express | MongoDB  | GitHub, VSCode, Git    |
-| React Router | REST APIs         | Mongoose | GitHub Actions (CI/CD) |
-| Context API  | JWT (future)      |          | dotenv, ESLint         |
+<p align="center">
+  <img src="https://img.shields.io/badge/Vite-%5E6.3.1-blueviolet?style=flat-square&logo=vite&logoColor=white" alt="Vite" />
+  <img src="https://img.shields.io/badge/React-%5E19.0-blue?style=flat-square&logo=react&logoColor=white" alt="React" />
+  <img src="https://img.shields.io/badge/State-LocalStorage-yellow?style=flat-square&logo=browser&logoColor=white" alt="LocalStorage" />
+  <img src="https://img.shields.io/badge/QR%20Tracking-enabled-brightgreen?style=flat-square" alt="QR Tracking" />
+  <img src="https://img.shields.io/badge/License-MIT-black?style=flat-square" alt="License" />
+</p>
 
 ---
 
-## 🧩 Features
+## 🚀 Why SS360 ERP?
 
-- ✅ **Customer Management** – Add/update customers with type & delivery preferences
-- ✅ **Inventory Tracking** – Raw & blended tea with grades and batch-wise cost
-- ✅ **Blending Engine** – Combine tea types into custom blends with profit visibility
-- ✅ **Sales Module** – Handle direct/retail sales and track real-time stock
-- ✅ **Profit Calculator** – Manual blend cost calculator with selling price tracker
-- ✅ **Modular Architecture** – Clean, scalable folder structure with React components
+This app is a front-end first ERP experience designed to make tea enterprise workflows visible and actionable.
 
----
-
-## 🗃️ Directory Structure
-
-```
-ss360-erp-2.0/
-├── public/
-├── src/
-│   ├── assets/           # Images and brand media
-│   ├── components/       # Reusable UI (buttons, tables, cards)
-│   ├── modules/          # POS, Inventory, Blending, Sales
-│   ├── services/         # API handlers (axios)
-│   ├── context/          # Global app state
-│   ├── App.jsx
-│   └── main.jsx
-├── .gitignore
-├── package.json
-├── vite.config.js
-└── README.md
-```
+- ✅ Manage procurement, inventory, blends, sales, and shipping from one interface
+- ✅ Keep stock, cost, and customer payment data in sync
+- ✅ Prototype ERP logic without a backend, using an in-browser data model
+- ✅ Explore traceability with raw lots, batch costing, and QR labels
 
 ---
 
-## 🚀 Getting Started
+## 🌟 What You’ll Find
 
-### 1. Clone the Repo
+- **Supplier / purchase order flows** with sample approval and receiving
+- **Raw inventory** tracked by lot, location, and reorder thresholds
+- **Blend production** that calculates true cost and profit margins
+- **Sales/POS workflows** with customer ledger updates
+- **Shipping updates** that move orders through Packed → Dispatched → Delivered
 
-```bash
-git clone https://github.com/madhavsmg/ss360-erp-2.0.git
-cd ss360-erp-2.0
-```
+---
 
-### 2. Install Dependencies
+## 🧩 Core Modules
+
+### 🧭 Dashboard
+
+A single control panel for business health:
+
+- Raw and finished inventory summaries
+- Sales revenue and profit metrics
+- Low-stock and open shipment alerts
+- Visual profit ranking for recent orders
+
+### 🤝 Suppliers
+
+Procurement is built around supplier relationships and purchase orders:
+
+- Add supplier profiles with terms and quality metrics
+- Create purchase orders after sample approval
+- Receive raw tea into inventory
+- Track supplier outstanding balances
+
+### 🧾 Customers
+
+Use this module to manage buyers and payment behavior:
+
+- Add customers with delivery and credit preferences
+- Track outstanding invoices and credit exposure
+- Review customer order history at a glance
+
+### 📦 Inventory
+
+Inventory is the hub of traceability:
+
+- Manage raw tea lots and finished blend batches
+- Search by supplier, variety, grade, SKU, or location
+- Generate QR labels for stock items
+- Scan QR payloads to jump to items instantly
+
+### 🧪 Production
+
+This module turns raw tea into finished blends:
+
+- Create blend recipes from selected raw lots
+- Enter packing, labor, and overhead costs
+- Preview batch costing, revenue, margin, and expected profit
+- Automatically reduce raw stock when a blend is produced
+
+### 💳 Sales / POS
+
+A compact sales interface for order entry and invoice generation:
+
+- Sell finished blends or raw tea directly
+- Pick customer, item, quantity, and shipping options
+- Auto-calculate revenue and update inventory
+- Create shipments for every sales order
+
+### 🚚 Shipping
+
+Track fulfillment through the final mile:
+
+- View the active shipment queue
+- Update status from Packed → Dispatched → Delivered
+- Add transport mode, vehicle number, and delivery notes
+- Keep order and shipment status linked automatically
+
+---
+
+## 🏗️ Architecture
+
+The app is organized to be easy to navigate and extend:
+
+- `src/App.jsx` — router and root layout
+- `src/context/EnterpriseContext.jsx` — business state, rules, and persistence
+- `src/modules/` — individual ERP module pages
+- `src/components/sidebar.jsx` — main navigation menu
+- `src/utils/formatters.js` — shared number and currency formatting
+- `src/modules/ERP/erp.css` — core ERP styles
+
+The app stores its state in browser `localStorage`, so your demo data is retained between sessions.
+
+---
+
+## 💻 Tech Stack
+
+- React 19
+- Vite 6
+- React Router DOM
+- Lucide React icons
+- `qrcode` for label generation
+- Browser `localStorage` persistence
+
+---
+
+## ▶️ Run Locally
 
 ```bash
 npm install
-```
-
-### 3. Run the App (Dev Mode)
-
-```bash
 npm run dev
 ```
 
----
-
-## 🛡️ .env Setup
-
-Create a `.env` file in the root (this is ignored by git):
-
-```env
-VITE_API_BASE_URL=http://localhost:5000/api
-```
+Open the localhost URL shown by Vite and start exploring the ERP experience.
 
 ---
 
-## 📊 Future Roadmap
+## 📌 Notes
 
-- [ ] Admin authentication & login
-- [ ] Role-based access control (Sales / Inventory / Manager)
-- [ ] Analytics Dashboard
-- [ ] MongoDB Atlas Cloud Sync
-- [ ] Dockerized deployment
-- [ ] Full CI/CD integration with GitHub Actions
+- The application is a front-end prototype and does not require a backend to run.
+- Seed data is loaded on first launch and saved in the browser.
+- The `POS` menu simply reuses the Sales module as a point-of-sale flow.
 
 ---
 
-## 🙏 Credits
+## 🔮 Future Enhancements
 
-Developed with ❤️ by [Madhav Kumar](https://github.com/madhavsmg)  
-For Siva Sai Tea Enterprises — established 1996
+Potential additions to make SS360 ERP even stronger:
+
+- Authentication and role-based access control
+- Backend integration with Node.js / Express / MongoDB
+- Analytics dashboards and reporting
+- Docker deployment and cloud sync with MongoDB Atlas
+- Enhanced inventory traceability with barcode/QR scanning
 
 ---
 
