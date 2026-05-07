@@ -1,161 +1,69 @@
-# 🧭 SS360 ERP 2.0
+# SS360 ERP 2.0
 
-**SS360 ERP 2.0** is a polished React prototype for **Siva Sai Tea Enterprises**. It brings the tea supply chain to life in a browser app, from supplier sourcing and warehouse stock to blending, sales, and shipping.
+SS360 ERP 2.0 is a React/Vite ERP workspace for Siva Sai Tea Enterprises. It covers supplier purchasing, invoice intake, raw tea inventory, QR labels, production blending, sales/POS, customers, and shipping.
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Vite-%5E6.3.1-blueviolet?style=flat-square&logo=vite&logoColor=white" alt="Vite" />
-  <img src="https://img.shields.io/badge/React-%5E19.0-blue?style=flat-square&logo=react&logoColor=white" alt="React" />
-  <img src="https://img.shields.io/badge/State-LocalStorage-yellow?style=flat-square&logo=browser&logoColor=white" alt="LocalStorage" />
-  <img src="https://img.shields.io/badge/QR%20Tracking-enabled-brightgreen?style=flat-square" alt="QR Tracking" />
-  <img src="https://img.shields.io/badge/License-MIT-black?style=flat-square" alt="License" />
-</p>
+## Project Structure
 
----
+```text
+.
+├── docs/                    Project notes and implementation references
+├── public/                  Static images served by Vite
+├── sample-data/invoices/    Purchase invoice samples for extraction testing
+├── scripts/                 Local development and validation scripts
+├── src/
+│   ├── components/          Shared app shell components
+│   ├── context/             ERP state, persistence, and business rules
+│   ├── modules/             Dashboard, supplier, inventory, production, sales, shipping pages
+│   └── utils/               Formatters and invoice extraction utilities
+├── index.html
+├── package.json
+├── package-lock.json
+└── vite.config.js
+```
 
-## 🚀 Why SS360 ERP?
-
-This app is a front-end first ERP experience designed to make tea enterprise workflows visible and actionable.
-
-- ✅ Manage procurement, inventory, blends, sales, and shipping from one interface
-- ✅ Keep stock, cost, and customer payment data in sync
-- ✅ Prototype ERP logic without a backend, using an in-browser data model
-- ✅ Explore traceability with raw lots, batch costing, and QR labels
-
----
-
-## 🌟 What You’ll Find
-
-- **Supplier / purchase order flows** with sample approval and receiving
-- **Raw inventory** tracked by lot, location, and reorder thresholds
-- **Blend production** that calculates true cost and profit margins
-- **Sales/POS workflows** with customer ledger updates
-- **Shipping updates** that move orders through Packed → Dispatched → Delivered
-
----
-
-## 🧩 Core Modules
-
-### 🧭 Dashboard
-
-A single control panel for business health:
-
-- Raw and finished inventory summaries
-- Sales revenue and profit metrics
-- Low-stock and open shipment alerts
-- Visual profit ranking for recent orders
-
-### 🤝 Suppliers
-
-Procurement is built around supplier relationships and purchase orders:
-
-- Add supplier profiles with terms and quality metrics
-- Create purchase orders after sample approval
-- Receive raw tea into inventory
-- Track supplier outstanding balances
-
-### 🧾 Customers
-
-Use this module to manage buyers and payment behavior:
-
-- Add customers with delivery and credit preferences
-- Track outstanding invoices and credit exposure
-- Review customer order history at a glance
-
-### 📦 Inventory
-
-Inventory is the hub of traceability:
-
-- Manage raw tea lots and finished blend batches
-- Search by supplier, variety, grade, SKU, or location
-- Generate QR labels for stock items
-- Scan QR payloads to jump to items instantly
-
-### 🧪 Production
-
-This module turns raw tea into finished blends:
-
-- Create blend recipes from selected raw lots
-- Enter packing, labor, and overhead costs
-- Preview batch costing, revenue, margin, and expected profit
-- Automatically reduce raw stock when a blend is produced
-
-### 💳 Sales / POS
-
-A compact sales interface for order entry and invoice generation:
-
-- Sell finished blends or raw tea directly
-- Pick customer, item, quantity, and shipping options
-- Auto-calculate revenue and update inventory
-- Create shipments for every sales order
-
-### 🚚 Shipping
-
-Track fulfillment through the final mile:
-
-- View the active shipment queue
-- Update status from Packed → Dispatched → Delivered
-- Add transport mode, vehicle number, and delivery notes
-- Keep order and shipment status linked automatically
-
----
-
-## 🏗️ Architecture
-
-The app is organized to be easy to navigate and extend:
-
-- `src/App.jsx` — router and root layout
-- `src/context/EnterpriseContext.jsx` — business state, rules, and persistence
-- `src/modules/` — individual ERP module pages
-- `src/components/sidebar.jsx` — main navigation menu
-- `src/utils/formatters.js` — shared number and currency formatting
-- `src/modules/ERP/erp.css` — core ERP styles
-
-The app stores its state in browser `localStorage`, so your demo data is retained between sessions.
-
----
-
-## 💻 Tech Stack
-
-- React 19
-- Vite 6
-- React Router DOM
-- Lucide React icons
-- `qrcode` for label generation
-- Browser `localStorage` persistence
-
----
-
-## ▶️ Run Locally
+## Run Locally
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open the localhost URL shown by Vite and start exploring the ERP experience.
+For the known local workspace port:
 
----
+```bash
+npm run dev:local
+```
 
-## 📌 Notes
+Open the Vite URL in the browser. In this workspace, the app is commonly run at `http://127.0.0.1:5174/`.
 
-- The application is a front-end prototype and does not require a backend to run.
-- Seed data is loaded on first launch and saved in the browser.
-- The `POS` menu simply reuses the Sales module as a point-of-sale flow.
+## Useful Commands
 
----
+```bash
+npm run lint
+npm run build
+npm run scan:invoices
+```
 
-## 🔮 Future Enhancements
+`npm run scan:invoices` reads every PDF/image under `sample-data/invoices/` and prints the extracted supplier, invoice, GST, stock lines, grades, bag counts, weights, rates, and totals.
 
-Potential additions to make SS360 ERP even stronger:
+## Main Features
 
-- Authentication and role-based access control
-- Backend integration with Node.js / Express / MongoDB
-- Analytics dashboards and reporting
-- Docker deployment and cloud sync with MongoDB Atlas
-- Enhanced inventory traceability with barcode/QR scanning
+- Supplier and purchase order workflows
+- OCR/PDF invoice intake for Indian tea purchase invoices
+- Tea grade extraction such as `BOP`, `BPS`, `BOPL`, `OF`, `PD1`, and `PF1`
+- Bag parsing such as `17X40` into bag count, kg per bag, and quantity in kg
+- GST handling for 5% tea tax using IGST or CGST/SGST split
+- Cart, coolie, labour, and transport charges captured for landed-cost allocation
+- Raw lot inventory, reorder thresholds, and QR label printing
+- Production blending with stock decrement and costing
+- Sales/POS, customer ledger, and shipping status flows
 
----
+## Data Model
 
-## 📄 License
+The app currently stores ERP state in browser `localStorage`. Approving an invoice posts reviewed stock lines into purchase orders, raw lots, supplier outstanding, and invoice receipt history. The committed sample invoices are only for parser testing; approving drafts in the browser does not alter files in the repo.
 
-This project is licensed under the [MIT License](LICENSE).
+## Notes
+
+- `dist/`, logs, caches, and local OCR artifacts are generated and ignored.
+- The legacy `Sample Invoices/` folder is ignored; the organized sample location is `sample-data/invoices/`.
+- The app is frontend-only for now. Backend/database integration can be added later without changing the UI module structure.

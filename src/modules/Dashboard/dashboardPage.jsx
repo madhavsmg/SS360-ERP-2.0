@@ -73,7 +73,7 @@ export default function DashboardPage() {
               <div key={lot.id}>
                 <strong>{lot.variety} is low</strong>
                 <span>
-                  {formatKg(lot.remainingKg)} left in {lot.location}
+                  {formatKg(lot.remainingKg)} remaining in QR lot {lot.id}
                 </span>
               </div>
             ))}

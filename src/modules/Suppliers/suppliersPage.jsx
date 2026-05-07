@@ -29,7 +29,6 @@ const purchaseFormDefaults = {
 const receiveFormDefaults = {
   purchaseOrderId: '',
   receivedBags: '',
-  location: 'Rack A',
   reorderKg: '75',
   receivedDate: '',
 };
@@ -369,18 +368,6 @@ export default function SuppliersPage() {
                 value={receiveForm.receivedBags}
                 onChange={(event) => updateForm(setReceiveForm, 'receivedBags', event.target.value)}
               />
-            </label>
-            <label>
-              <span>Rack</span>
-              <select
-                value={receiveForm.location}
-                onChange={(event) => updateForm(setReceiveForm, 'location', event.target.value)}
-              >
-                <option>Rack A</option>
-                <option>Rack B</option>
-                <option>Rack C</option>
-                <option>Floor Stack</option>
-              </select>
             </label>
             <label>
               <span>Reorder kg</span>

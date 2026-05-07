@@ -122,7 +122,6 @@ const seedData = {
       remainingKg: 310,
       costPerKg: 146,
       reorderKg: 80,
-      location: 'Rack A',
       receivedDate: '2025-04-19',
       quality: {
         taste: 9,
@@ -159,7 +158,6 @@ const seedData = {
       remainingKg: 130,
       costPerKg: 88,
       reorderKg: 60,
-      location: 'Rack B',
       receivedDate: '2025-04-19',
       quality: {
         taste: 7,
@@ -196,7 +194,6 @@ const seedData = {
       remainingKg: 220,
       costPerKg: 172,
       reorderKg: 70,
-      location: 'Rack C',
       receivedDate: '2025-04-18',
       quality: {
         taste: 8,
@@ -239,7 +236,6 @@ const seedData = {
       costPerKg: 152.28,
       expectedRevenue: 44100,
       expectedProfit: 16690,
-      location: 'Finished Shelf',
       packagingStatus: 'Packed',
       components: [
         {
@@ -303,6 +299,7 @@ const seedData = {
       note: 'Delivered to hotel stores counter',
     },
   ],
+  invoiceReceipts: [],
 };
 
 const EnterpriseContext = createContext(null);
@@ -310,6 +307,14 @@ const EnterpriseContext = createContext(null);
 function numberValue(value, fallback = 0) {
   const parsedValue = Number(value);
   return Number.isFinite(parsedValue) ? parsedValue : fallback;
+}
+
+function presentNumber(value, fallback = 0) {
+  if (value === null || value === undefined || String(value).trim() === '') {
+    return fallback;
+  }
+
+  return numberValue(value, fallback);
 }
 
 function roundMoney(value) {
@@ -341,6 +346,7 @@ function normalizeData(data) {
     blendBatches: data.blendBatches || [],
     salesOrders: data.salesOrders || [],
     shipments: data.shipments || [],
+    invoiceReceipts: data.invoiceReceipts || [],
   };
 }
 
@@ -410,6 +416,66 @@ function getItemCostPerKg(itemType, item) {
   }
 
   return itemType === 'raw' ? item.costPerKg : item.costPerKg;
+}
+
+function normalizeKey(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
+function regionFromAddress(address) {
+  const addressParts = String(address || '')
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  return addressParts.slice(-2, -1)[0] || addressParts.at(-1) || 'Invoice Vendor';
+}
+
+function getInvoiceLineNumbers(item) {
+  const quantity = presentNumber(item.quantity);
+  const unitWeightKg = presentNumber(item.unitWeightKg, 1);
+  const receivedKg = presentNumber(item.receivedKg, quantity * unitWeightKg);
+  const taxableValue = presentNumber(item.taxableValue);
+  const ratePerKg = presentNumber(item.ratePerKg, receivedKg > 0 ? taxableValue / receivedKg : 0);
+  const cgstAmount = presentNumber(item.cgstAmount);
+  const sgstAmount = presentNumber(item.sgstAmount);
+  const igstAmount = presentNumber(item.igstAmount);
+  const lineTotal = presentNumber(
+    item.lineTotal,
+    taxableValue + cgstAmount + sgstAmount + igstAmount
+  );
+
+  return {
+    quantity,
+    unitWeightKg,
+    receivedKg,
+    taxableValue: roundMoney(taxableValue || receivedKg * ratePerKg),
+    ratePerKg: roundMoney(ratePerKg),
+    cgstRate: presentNumber(item.cgstRate),
+    cgstAmount: roundMoney(cgstAmount),
+    sgstRate: presentNumber(item.sgstRate),
+    sgstAmount: roundMoney(sgstAmount),
+    igstRate: presentNumber(item.igstRate),
+    igstAmount: roundMoney(igstAmount),
+    lineTotal: roundMoney(lineTotal),
+    reorderKg: presentNumber(item.reorderKg, Math.max(receivedKg * 0.2, 25)),
+  };
+}
+
+function getInvoiceCharges(draft) {
+  return (draft.charges || [])
+    .map((charge) => ({
+      id: charge.id || makeId('CHG', charge.label || charge.category || 'charge'),
+      label: charge.label?.trim() || charge.category?.trim() || 'Miscellaneous charge',
+      category: charge.category?.trim() || 'Miscellaneous',
+      amount: roundMoney(presentNumber(charge.amount)),
+      allocationMethod: charge.allocationMethod || 'By kg',
+      includeInLandedCost: charge.includeInLandedCost !== false,
+    }))
+    .filter((charge) => charge.amount > 0);
 }
 
 export function EnterpriseProvider({ children }) {
@@ -569,7 +635,6 @@ export function EnterpriseProvider({ children }) {
       remainingKg: receivedKg,
       costPerKg: order.ratePerKg,
       reorderKg: numberValue(form.reorderKg, Math.max(order.bagWeightKg, 50)),
-      location: form.location || 'Rack A',
       receivedDate: form.receivedDate || today,
       quality: {
         taste: order.sample.taste,
@@ -611,6 +676,284 @@ export function EnterpriseProvider({ children }) {
     }));
 
     return rawLot;
+  }
+
+  function approveInvoiceReceipt(draft) {
+    const vendorName = draft.vendor?.name?.trim();
+    const invoiceNumber = draft.invoice?.number?.trim() || 'Unnumbered';
+    const invoiceDate = draft.invoice?.date || today;
+    const draftItems = (draft.items || []).filter((item) => item.teaName?.trim());
+
+    if (!vendorName) {
+      throw new Error('Vendor name is required before approving the invoice.');
+    }
+
+    if (!draftItems.length) {
+      throw new Error('Add at least one invoice stock line before approval.');
+    }
+
+    const invalidItem = draftItems.find((item) => {
+      const numbers = getInvoiceLineNumbers(item);
+      return (
+        !item.teaName.trim() ||
+        numbers.quantity <= 0 ||
+        numbers.receivedKg <= 0 ||
+        numbers.ratePerKg <= 0
+      );
+    });
+
+    if (invalidItem) {
+      throw new Error('Every stock line needs name, quantity, received kg, and rate/kg.');
+    }
+
+    const existingSupplier = data.suppliers.find(
+      (supplier) => normalizeKey(supplier.name) === normalizeKey(vendorName)
+    );
+    const generatedSupplier = {
+      id: makeId('SUP', vendorName),
+      name: vendorName,
+      agentName: 'Invoice Intake',
+      phone: draft.vendor?.phone?.trim() || '',
+      region: regionFromAddress(draft.vendor?.address),
+      paymentTerms: 'Invoice due',
+      reliabilityScore: 80,
+      qualityScore: 80,
+      outstanding: 0,
+      gstin: draft.vendor?.gstin?.trim() || '',
+      address: draft.vendor?.address?.trim() || '',
+    };
+    const invoiceId = makeId('INV', invoiceNumber);
+    let approvalResult = null;
+
+    setData((currentData) => {
+      const currentSupplier =
+        currentData.suppliers.find(
+          (supplier) => normalizeKey(supplier.name) === normalizeKey(vendorName)
+        ) ||
+        existingSupplier ||
+        generatedSupplier;
+      const lineItems = draftItems.map((item, index) => {
+        const numbers = getInvoiceLineNumbers(item);
+        const grade = item.grade?.trim() || item.hsn?.trim() || 'Invoice';
+        const bagWeightKg = numbers.quantity > 0 ? numbers.receivedKg / numbers.quantity : 1;
+        const purchaseOrderId = makeId('PO', `${item.teaName}-${invoiceNumber}-${index + 1}`);
+        const rawLotId = makeId('RAW', `${item.teaName}-${grade}`);
+
+        return {
+          draft: item,
+          numbers,
+          grade,
+          bagWeightKg: roundMoney(bagWeightKg),
+          purchaseOrderId,
+          rawLotId,
+        };
+      });
+      const taxableTotal = lineItems.reduce((total, line) => total + line.numbers.taxableValue, 0);
+      const invoiceCharges = getInvoiceCharges(draft);
+      const parsedChargesTotal = invoiceCharges.reduce((total, charge) => total + charge.amount, 0);
+      const miscChargesTotal = presentNumber(draft.totals?.miscChargesTotal, parsedChargesTotal);
+      const normalizedCharges =
+        invoiceCharges.length || miscChargesTotal <= 0
+          ? invoiceCharges
+          : [
+              {
+                id: makeId('CHG', invoiceNumber),
+                label: 'Miscellaneous invoice charges',
+                category: 'Miscellaneous',
+                amount: roundMoney(miscChargesTotal),
+                allocationMethod: 'By kg',
+                includeInLandedCost: true,
+              },
+            ];
+      const landedChargeTotal =
+        miscChargesTotal ||
+        normalizedCharges
+          .filter((charge) => charge.includeInLandedCost)
+          .reduce((total, charge) => total + charge.amount, 0);
+      const totalReceivedKg = lineItems.reduce(
+        (total, line) => total + line.numbers.receivedKg,
+        0
+      );
+      const lineItemsWithCosts = lineItems.map((line) => {
+        const allocationRatio =
+          totalReceivedKg > 0 ? line.numbers.receivedKg / totalReceivedKg : 1 / lineItems.length;
+        const allocatedCharges = roundMoney(landedChargeTotal * allocationRatio);
+        const landedCost = roundMoney(line.numbers.taxableValue + allocatedCharges);
+
+        return {
+          ...line,
+          allocatedCharges,
+          landedCost,
+          landedCostPerKg:
+            line.numbers.receivedKg > 0 ? roundMoney(landedCost / line.numbers.receivedKg) : 0,
+        };
+      });
+      const purchaseOrders = lineItemsWithCosts.map((line) => ({
+        id: line.purchaseOrderId,
+        supplierId: currentSupplier.id,
+        supplierName: currentSupplier.name,
+        variety: line.draft.teaName.trim(),
+        grade: line.grade,
+        orderBags: line.numbers.quantity,
+        bagWeightKg: line.bagWeightKg,
+        ratePerKg: line.numbers.ratePerKg,
+        orderedKg: line.numbers.receivedKg,
+        receivedKg: line.numbers.receivedKg,
+        expectedDate: invoiceDate,
+        status: 'Received',
+        sample: {
+          taste: 8,
+          color: 8,
+          aroma: 8,
+          approved: true,
+        },
+        totalCost: line.landedCost,
+        goodsAmount: line.numbers.taxableValue,
+        allocatedCharges: line.allocatedCharges,
+        landedCostPerKg: line.landedCostPerKg,
+        paidAmount: 0,
+        invoiceId,
+        invoiceNumber,
+      }));
+      const rawLots = lineItemsWithCosts.map((line) => ({
+        id: line.rawLotId,
+        purchaseOrderId: line.purchaseOrderId,
+        supplierId: currentSupplier.id,
+        supplierName: currentSupplier.name,
+        variety: line.draft.teaName.trim(),
+        grade: line.grade,
+        bags: line.numbers.quantity,
+        bagWeightKg: line.bagWeightKg,
+        receivedKg: line.numbers.receivedKg,
+        remainingKg: line.numbers.receivedKg,
+        costPerKg: line.landedCostPerKg || line.numbers.ratePerKg,
+        goodsRatePerKg: line.numbers.ratePerKg,
+        goodsAmount: line.numbers.taxableValue,
+        acquisitionChargeShare: line.allocatedCharges,
+        landedCost: line.landedCost,
+        reorderKg: line.numbers.reorderKg,
+        receivedDate: invoiceDate,
+        quality: {
+          taste: 8,
+          color: 8,
+          aroma: 8,
+        },
+        movements: [
+          {
+            id: makeId('MOV', line.draft.teaName),
+            type: 'Invoice Received',
+            kg: line.numbers.receivedKg,
+            note: `Invoice ${invoiceNumber} approved`,
+            date: invoiceDate,
+          },
+        ],
+      }));
+      const cgstAmount = presentNumber(
+        draft.totals?.cgstAmount,
+        lineItemsWithCosts.reduce((total, line) => total + line.numbers.cgstAmount, 0)
+      );
+      const sgstAmount = presentNumber(
+        draft.totals?.sgstAmount,
+        lineItemsWithCosts.reduce((total, line) => total + line.numbers.sgstAmount, 0)
+      );
+      const igstAmount = presentNumber(draft.totals?.igstAmount);
+      const grossTotal = presentNumber(draft.totals?.grossTotal, taxableTotal + miscChargesTotal);
+      const netTotal = presentNumber(
+        draft.totals?.netTotal,
+        grossTotal + cgstAmount + sgstAmount + igstAmount
+      );
+      const invoiceRecord = {
+        id: invoiceId,
+        invoiceNumber,
+        invoiceDate,
+        supplierId: currentSupplier.id,
+        supplierName: currentSupplier.name,
+        vendorAddress: draft.vendor?.address?.trim() || '',
+        vendorGstin: draft.vendor?.gstin?.trim() || '',
+        sourceName: draft.sourceName || '',
+        sourceType: draft.sourceType || '',
+        pageCount: presentNumber(draft.pageCount),
+        extractionMode: draft.extractionMode || '',
+        confidence: presentNumber(draft.confidence),
+        taxableValue: roundMoney(presentNumber(draft.totals?.taxableValue, taxableTotal)),
+        cgstAmount: roundMoney(cgstAmount),
+        sgstAmount: roundMoney(sgstAmount),
+        igstAmount: roundMoney(igstAmount),
+        totalTaxAmount: roundMoney(cgstAmount + sgstAmount + igstAmount),
+        miscChargesTotal: roundMoney(miscChargesTotal),
+        charges: normalizedCharges,
+        landedCostTotal: roundMoney(taxableTotal + landedChargeTotal),
+        grossTotal: roundMoney(grossTotal),
+        netTotal: roundMoney(netTotal),
+        approvedAt: today,
+        status: 'Approved',
+        purchaseOrderIds: purchaseOrders.map((order) => order.id),
+        rawLotIds: rawLots.map((lot) => lot.id),
+        lineItems: lineItemsWithCosts.map((line) => ({
+          teaName: line.draft.teaName.trim(),
+          grade: line.grade,
+          hsn: line.draft.hsn?.trim() || '',
+          quantity: line.numbers.quantity,
+          unit: line.draft.unit || 'Bags',
+          unitWeightKg: line.numbers.unitWeightKg,
+          receivedKg: line.numbers.receivedKg,
+          ratePerKg: line.numbers.ratePerKg,
+          taxableValue: line.numbers.taxableValue,
+          allocatedCharges: line.allocatedCharges,
+          landedCost: line.landedCost,
+          landedCostPerKg: line.landedCostPerKg,
+          cgstRate: line.numbers.cgstRate,
+          cgstAmount: line.numbers.cgstAmount,
+          sgstRate: line.numbers.sgstRate,
+          sgstAmount: line.numbers.sgstAmount,
+          igstRate: line.numbers.igstRate,
+          igstAmount: line.numbers.igstAmount,
+          lineTotal: line.numbers.lineTotal,
+          rawLotId: line.rawLotId,
+          purchaseOrderId: line.purchaseOrderId,
+        })),
+        rawText: draft.rawText || '',
+      };
+      const supplierAlreadyPresent = currentData.suppliers.some(
+        (supplier) => supplier.id === currentSupplier.id
+      );
+      const suppliers = supplierAlreadyPresent
+        ? currentData.suppliers.map((supplier) =>
+            supplier.id === currentSupplier.id
+              ? {
+                  ...supplier,
+                  gstin: supplier.gstin || currentSupplier.gstin,
+                  address: supplier.address || currentSupplier.address,
+                  outstanding: roundMoney(
+                    numberValue(supplier.outstanding) + invoiceRecord.netTotal
+                  ),
+                }
+              : supplier
+          )
+        : [
+            {
+              ...currentSupplier,
+              outstanding: roundMoney(invoiceRecord.netTotal),
+            },
+            ...currentData.suppliers,
+          ];
+
+      approvalResult = {
+        invoice: invoiceRecord,
+        rawLots,
+        purchaseOrders,
+      };
+
+      return {
+        ...currentData,
+        suppliers,
+        purchaseOrders: [...purchaseOrders, ...currentData.purchaseOrders],
+        rawLots: [...rawLots, ...currentData.rawLots],
+        invoiceReceipts: [invoiceRecord, ...currentData.invoiceReceipts],
+      };
+    });
+
+    return approvalResult;
   }
 
   function recordSupplierPayment(supplierId, amount) {
@@ -713,7 +1056,6 @@ export function EnterpriseProvider({ children }) {
       costPerKg: preview.costPerKg,
       expectedRevenue: preview.expectedRevenue,
       expectedProfit: preview.expectedProfit,
-      location: form.location || 'Finished Shelf',
       packagingStatus: form.packagingStatus || 'Packed',
       components: preview.components.map((component) => ({
         lotId: component.lot.id,
@@ -908,6 +1250,7 @@ export function EnterpriseProvider({ children }) {
     addSupplier,
     createPurchaseOrder,
     receivePurchaseOrder,
+    approveInvoiceReceipt,
     recordSupplierPayment,
     addCustomer,
     recordCustomerPayment,
