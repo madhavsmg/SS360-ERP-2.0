@@ -9,7 +9,6 @@ const blendDefaults = {
   packingCostPerKg: '12',
   laborCost: '',
   overheadCost: '',
-  location: 'Finished Shelf',
   packagingStatus: 'Packed',
   components: [
     { lotId: '', kg: '' },
@@ -74,7 +73,7 @@ export default function ProductionPage() {
           <div className="erp-panel-title">
             <h2>New Blend Batch</h2>
           </div>
-          <div className="erp-form-grid four">
+          <div className="erp-form-grid three">
             <label>
               <span>Product</span>
               <input
@@ -95,18 +94,6 @@ export default function ProductionPage() {
                 value={form.sellingPricePerKg}
                 onChange={(event) => updateForm('sellingPricePerKg', event.target.value)}
               />
-            </label>
-            <label>
-              <span>Finished rack</span>
-              <select
-                value={form.location}
-                onChange={(event) => updateForm('location', event.target.value)}
-              >
-                <option>Finished Shelf</option>
-                <option>Rack A</option>
-                <option>Rack B</option>
-                <option>Rack C</option>
-              </select>
             </label>
           </div>
 

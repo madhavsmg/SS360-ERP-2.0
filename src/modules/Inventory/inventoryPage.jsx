@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
 import { useEnterprise } from '../../context/EnterpriseContext';
 import { formatKg, formatMoney } from '../../utils/formatters';
+import InvoiceIntake from './invoiceIntake';
 
 function getQrPayload(type, item) {
   if (type === 'raw') {
@@ -15,7 +16,6 @@ function getQrPayload(type, item) {
       supplier: item.supplierName,
       remainingKg: item.remainingKg,
       costPerKg: item.costPerKg,
-      location: item.location,
     });
   }
 
@@ -29,7 +29,6 @@ function getQrPayload(type, item) {
     remainingKg: item.remainingKg,
     costPerKg: item.costPerKg,
     sellingPricePerKg: item.sellingPricePerKg,
-    location: item.location,
   });
 }
 
@@ -66,7 +65,7 @@ export default function InventoryPage() {
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const rawLots = useMemo(() => {
     return data.rawLots.filter((lot) =>
-      [lot.id, lot.variety, lot.grade, lot.supplierName, lot.location]
+      [lot.id, lot.variety, lot.grade, lot.supplierName]
         .join(' ')
         .toLowerCase()
         .includes(normalizedSearch)
@@ -74,7 +73,7 @@ export default function InventoryPage() {
   }, [data.rawLots, normalizedSearch]);
   const blendBatches = useMemo(() => {
     return data.blendBatches.filter((batch) =>
-      [batch.id, batch.productName, batch.sku, batch.location]
+      [batch.id, batch.productName, batch.sku]
         .join(' ')
         .toLowerCase()
         .includes(normalizedSearch)
@@ -148,13 +147,13 @@ export default function InventoryPage() {
 
     if (rawLot) {
       selectLabel('raw', rawLot.id);
-      setMessage(`${rawLot.variety} selected from ${rawLot.location}.`);
+      setMessage(`${rawLot.variety} selected from QR lot ${rawLot.id}.`);
       return;
     }
 
     if (blendBatch) {
       selectLabel('blend', blendBatch.id);
-      setMessage(`${blendBatch.productName} selected from ${blendBatch.location}.`);
+      setMessage(`${blendBatch.productName} selected from QR batch ${blendBatch.id}.`);
       return;
     }
 
@@ -166,9 +165,10 @@ export default function InventoryPage() {
       <header className="erp-header">
         <div>
           <span className="erp-kicker">Inventory</span>
-          <h1>QR Stock Ledger</h1>
+          <h1>Invoice Intake & QR Stock Ledger</h1>
           <p>
-            Every received raw lot and finished blend batch has traceability from supplier to sale.
+            Vendor invoices, received raw lots, and finished blend batches stay traceable from
+            document review to QR label.
           </p>
         </div>
         <div className="erp-actions">
@@ -180,6 +180,8 @@ export default function InventoryPage() {
 
       {message && <p className="erp-message">{message}</p>}
 
+      <InvoiceIntake />
+
       <div className="erp-workspace">
         <div className="erp-panel">
           <div className="erp-panel-title">
@@ -189,7 +191,7 @@ export default function InventoryPage() {
               <input
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Lot, product, supplier, rack"
+                placeholder="Lot, product, supplier, QR ID"
               />
             </label>
           </div>
@@ -198,8 +200,8 @@ export default function InventoryPage() {
             <div className="erp-row head">
               <span>Raw Lot</span>
               <span>Stock</span>
-              <span>Cost/kg</span>
-              <span>Location</span>
+              <span>Landed/kg</span>
+              <span>Reorder</span>
               <span>Status</span>
             </div>
             {rawLots.map((lot) => (
@@ -217,7 +219,7 @@ export default function InventoryPage() {
                 </span>
                 <span>{formatKg(lot.remainingKg)}</span>
                 <span>{formatMoney(lot.costPerKg)}</span>
-                <span>{lot.location}</span>
+                <span>{formatKg(lot.reorderKg)}</span>
                 <span
                   className={lot.remainingKg <= lot.reorderKg ? 'erp-pill warning' : 'erp-pill'}
                 >
@@ -293,8 +295,8 @@ export default function InventoryPage() {
                   <dd>{formatKg(selectedItem.remainingKg)}</dd>
                 </div>
                 <div>
-                  <dt>Location</dt>
-                  <dd>{selectedItem.location}</dd>
+                  <dt>Trace</dt>
+                  <dd>{selectedLabel.type === 'raw' ? 'Raw lot QR' : 'Batch QR'}</dd>
                 </div>
               </dl>
               <div className="erp-trace-list erp-no-print">

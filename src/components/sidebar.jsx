@@ -52,8 +52,12 @@ export default function Sidebar() {
       </nav>
 
       <div className="app-sidebar-footer">
-        <img className="app-sidebar-footer-icon" src="/vite.svg" alt="Vite" />
-        <span>Built with Vite · Local ERP workspace</span>
+        <img
+          className="app-sidebar-footer-icon"
+          src="/circle%20logo%20ss%20tea.png"
+          alt="SS-360 Tea"
+        />
+        <span>Local ERP workspace</span>
       </div>
     </aside>
   );
