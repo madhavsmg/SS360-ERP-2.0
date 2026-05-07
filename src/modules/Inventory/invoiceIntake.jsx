@@ -9,6 +9,12 @@ import {
   extractInvoiceFromFile,
   extractInvoiceFromImageDataUrl,
 } from '../../utils/invoiceExtraction';
+import {
+  approveBackendInvoice,
+  dataUrlToInvoiceFile,
+  extractInvoiceWithBackend,
+  LOCAL_OCR_SERVICE_MESSAGE,
+} from '../../utils/invoiceBackendClient';
 
 function progressLabel(progress) {
   if (!progress) {
@@ -107,7 +113,9 @@ export default function InvoiceIntake() {
       totals: {
         ...currentDraft.totals,
         miscChargesTotal: (currentDraft.charges || [])
-          .map((charge, chargeIndex) => (chargeIndex === index ? { ...charge, [field]: value } : charge))
+          .map((charge, chargeIndex) =>
+            chargeIndex === index ? { ...charge, [field]: value } : charge
+          )
           .reduce((total, charge) => total + numberValue(charge.amount), 0)
           .toString(),
       },
@@ -162,11 +170,18 @@ export default function InvoiceIntake() {
     setProgress({ label: 'Starting extraction', progress: 0 });
 
     try {
-      const nextDraft = await extractInvoiceFromFile(file, setProgress);
-      setDraft(nextDraft);
-      setMessage(`${file.name} extracted. Review all fields before approval.`);
+      const result = await extractInvoiceWithBackend(file, setProgress);
+      setDraft(result.draft);
+      setMessage(`${file.name} extracted ${backendExtractionLabel(result.draft)}. Review all fields before approval.`);
     } catch (error) {
-      setMessage(error.message);
+      try {
+        setProgress({ label: 'Using browser OCR fallback', progress: 0.05 });
+        const nextDraft = await extractInvoiceFromFile(file, setProgress);
+        setDraft(nextDraft);
+        setMessage(`${fallbackMessage(error)} Browser OCR fallback extracted ${file.name}.`);
+      } catch (fallbackError) {
+        setMessage(fallbackError.message);
+      }
     } finally {
       setIsProcessing(false);
       setProgress(null);
@@ -221,22 +236,38 @@ export default function InvoiceIntake() {
     setMessage('');
 
     try {
-      const nextDraft = await extractInvoiceFromImageDataUrl(
-        canvas.toDataURL('image/png'),
-        setProgress
+      const dataUrl = canvas.toDataURL('image/png');
+      const cameraFile = dataUrlToInvoiceFile(dataUrl, `camera-invoice-${Date.now()}.png`);
+      const result = await extractInvoiceWithBackend(cameraFile, setProgress);
+      setDraft(result.draft);
+      setMessage(
+        'Camera capture extracted with local PaddleOCR. Review all fields before approval.'
       );
-      setDraft(nextDraft);
-      setMessage('Camera capture extracted. Review all fields before approval.');
     } catch (error) {
-      setMessage(error.message);
+      try {
+        const dataUrl = canvas.toDataURL('image/png');
+        const nextDraft = await extractInvoiceFromImageDataUrl(dataUrl, setProgress);
+        setDraft(nextDraft);
+        setMessage(`${fallbackMessage(error)} Browser OCR fallback extracted the camera capture.`);
+      } catch (fallbackError) {
+        setMessage(fallbackError.message);
+      }
     } finally {
       setIsProcessing(false);
       setProgress(null);
     }
   }
 
-  function approveDraft() {
+  async function approveDraft() {
+    setIsProcessing(true);
+    setMessage('');
+
     try {
+      if (draft.backendInvoiceId) {
+        setProgress({ label: 'Posting approved invoice to backend', progress: 0.65 });
+        await approveBackendInvoice(draft.backendInvoiceId, draft);
+      }
+
       approveInvoiceReceipt(draft);
       setMessage(
         `${draft.invoice.number || 'Invoice'} approved. ${reviewSummary.stockLines} raw stock lots posted.`
@@ -244,6 +275,9 @@ export default function InvoiceIntake() {
       setDraft(createEmptyInvoiceDraft());
     } catch (error) {
       setMessage(error.message);
+    } finally {
+      setIsProcessing(false);
+      setProgress(null);
     }
   }
 
@@ -344,7 +378,9 @@ export default function InvoiceIntake() {
                 <span>
                   {invoice.supplierName} | {formatMoney(invoice.netTotal)} |{' '}
                   {invoice.rawLotIds.length} lots
-                  {invoice.miscChargesTotal ? ` | ${formatMoney(invoice.miscChargesTotal)} charges` : ''}
+                  {invoice.miscChargesTotal
+                    ? ` | ${formatMoney(invoice.miscChargesTotal)} charges`
+                    : ''}
                 </span>
               </div>
             ))}
@@ -569,7 +605,7 @@ export default function InvoiceIntake() {
           <div className="erp-row head">
             <span>Tea / Grade</span>
             <span>Bags</span>
-            <span>Kg/Bag</span>
+            <span>Weight (kgs)</span>
             <span>Quantity (kgs)</span>
             <span>Rate/Kg</span>
             <span>Amount Before GST</span>
@@ -704,4 +740,17 @@ export default function InvoiceIntake() {
       </section>
     </div>
   );
+}
+
+function fallbackMessage(error) {
+  const message = error?.message || '';
+  return message.includes('Local OCR service is not running')
+    ? LOCAL_OCR_SERVICE_MESSAGE
+    : 'Backend OCR is unavailable.';
+}
+
+function backendExtractionLabel(draft) {
+  return /embedded text/i.test(draft?.extractionMode || '')
+    ? 'through the backend PDF text reader'
+    : 'with local PaddleOCR';
 }

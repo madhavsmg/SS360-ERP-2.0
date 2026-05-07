@@ -58,6 +58,24 @@ Desktop.ini
 eng.traineddata
 *.traineddata
 tessdata/
+ocr-service/.venv/
+ocr-service/venv/
+ocr-service/__pycache__/
+ocr-service/**/__pycache__/
+ocr-service/**/*.pyc
+ocr-service/temp/*
+!ocr-service/temp/.gitkeep
+ocr-service/output/*
+!ocr-service/output/.gitkeep
+
+# Backend runtime artifacts
+backend/node_modules/
+backend/uploads/*
+!backend/uploads/
+backend/uploads/invoices/*
+!backend/uploads/invoices/
+!backend/uploads/invoices/.gitkeep
+backend/.prisma/
 
 # Legacy invoice folder kept out of Git if Windows has a locked file open
 Sample Invoices/
