@@ -20,23 +20,23 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <div className="erp-summary-grid">
-        <div className="erp-stat">
+      <div className="erp-summary-grid dashboard-summary-grid">
+        <div className="erp-stat dashboard-stat raw-stock">
           <span>Raw Tea Stock</span>
           <strong>{formatKg(metrics.rawKg)}</strong>
           <small>{formatMoney(metrics.rawValue)} at cost</small>
         </div>
-        <div className="erp-stat">
+        <div className="erp-stat dashboard-stat finished-stock">
           <span>Finished Products</span>
           <strong>{formatKg(metrics.finishedKg)}</strong>
           <small>{formatMoney(metrics.finishedValue)} at cost</small>
         </div>
-        <div className="erp-stat">
+        <div className="erp-stat dashboard-stat sales-revenue">
           <span>Sales Revenue</span>
           <strong>{formatMoney(metrics.salesRevenue)}</strong>
           <small>{formatMoney(metrics.salesProfit)} profit</small>
         </div>
-        <div className="erp-stat">
+        <div className="erp-stat dashboard-stat open-shipments">
           <span>Open Shipments</span>
           <strong>{metrics.openShipments}</strong>
           <small>{metrics.lowRawLots} low-stock raw lots</small>

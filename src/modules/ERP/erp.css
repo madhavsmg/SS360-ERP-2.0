@@ -291,6 +291,58 @@
   font-size: 0.72rem;
 }
 
+.dashboard-summary-grid {
+  gap: 12px;
+}
+
+.dashboard-stat {
+  position: relative;
+  overflow: hidden;
+  border-width: 1px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.72)),
+    var(--dashboard-stat-bg, #ffffff);
+}
+
+.dashboard-stat::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 6px;
+  background: var(--dashboard-stat-accent, var(--brand));
+}
+
+.dashboard-stat span,
+.dashboard-stat strong,
+.dashboard-stat small {
+  position: relative;
+  z-index: 1;
+}
+
+.dashboard-stat.raw-stock {
+  --dashboard-stat-accent: #236d45;
+  --dashboard-stat-bg: linear-gradient(135deg, rgba(226, 244, 231, 0.96), rgba(255, 255, 255, 0.82));
+  border-color: rgba(35, 109, 69, 0.28);
+}
+
+.dashboard-stat.finished-stock {
+  --dashboard-stat-accent: #0f766e;
+  --dashboard-stat-bg: linear-gradient(135deg, rgba(226, 245, 241, 0.96), rgba(255, 255, 255, 0.82));
+  border-color: rgba(15, 118, 110, 0.28);
+}
+
+.dashboard-stat.sales-revenue {
+  --dashboard-stat-accent: #a66a13;
+  --dashboard-stat-bg: linear-gradient(135deg, rgba(255, 242, 216, 0.98), rgba(255, 255, 255, 0.82));
+  border-color: rgba(166, 106, 19, 0.28);
+}
+
+.dashboard-stat.open-shipments {
+  --dashboard-stat-accent: #d96848;
+  --dashboard-stat-bg: linear-gradient(135deg, rgba(255, 240, 235, 0.98), rgba(255, 255, 255, 0.82));
+  border-color: rgba(217, 104, 72, 0.28);
+}
+
 .erp-empty-state {
   margin: 0;
   border: 1px dashed var(--line);

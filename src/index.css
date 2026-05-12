@@ -54,11 +54,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(241, 244, 239, 0.96)),
-    radial-gradient(circle at 12% 0%, rgba(250, 186, 82, 0.2), transparent 28rem),
-    radial-gradient(circle at 86% 12%, rgba(35, 109, 69, 0.14), transparent 34rem),
-    #f1f4ef;
+  background: #f1f4ef;
   color: var(--text);
 }
 
@@ -99,7 +95,7 @@ a {
   background-position: center;
   background-repeat: no-repeat;
   background-size: cover;
-  opacity: 0.24;
+  opacity: 1;
 }
 
 .app-shell::after {
@@ -108,9 +104,7 @@ a {
   inset: 0;
   z-index: -2;
   pointer-events: none;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(244, 247, 241, 0.96)),
-    radial-gradient(circle at 50% 52%, rgba(35, 109, 69, 0.09), transparent 14rem);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .app-sidebar {
@@ -258,9 +252,8 @@ a {
   background-image: url('/circle%20logo%20ss%20tea.png');
   background-position: center;
   background-repeat: no-repeat;
-  background-size: clamp(190px, 22vw, 330px);
-  opacity: 0.035;
-  filter: grayscale(1) contrast(1.1);
+  background-size: clamp(250px, 25vw, 380px);
+  opacity: 0.34;
 }
 
 .app-main > * {
