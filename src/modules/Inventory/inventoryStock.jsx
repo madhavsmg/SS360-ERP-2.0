@@ -204,7 +204,7 @@ export default function InventoryStock() {
       return;
     }
 
-    setMessage('No active raw lot or finished batch matched that QR value.');
+    setMessage('No active raw lot or blended batch matched that QR value.');
   }
 
   return (
@@ -216,7 +216,7 @@ export default function InventoryStock() {
           <small>{formatMoney(metrics.rawValue)} active value</small>
         </div>
         <div className="erp-stat">
-          <span>Finished Stock</span>
+          <span>Blended Stock</span>
           <strong>{formatKg(metrics.finishedKg)}</strong>
           <small>{formatMoney(metrics.finishedValue)} batch value</small>
         </div>
@@ -267,7 +267,7 @@ export default function InventoryStock() {
               type="button"
               onClick={() => setStockMode('blend')}
             >
-              Finished Batches
+              Blended Batches
             </button>
           </div>
 
@@ -312,7 +312,7 @@ export default function InventoryStock() {
           ) : (
             <div className="erp-table table-inventory">
               <div className="erp-row head">
-                <span>Finished Batch</span>
+                <span>Blended Batch</span>
                 <span>Stock</span>
                 <span>Cost/kg</span>
                 <span>Sell/kg</span>
@@ -339,7 +339,9 @@ export default function InventoryStock() {
                   </span>
                 </button>
               ))}
-              {blendBatches.length === 0 && <p className="erp-empty-state">No batches match.</p>}
+              {blendBatches.length === 0 && (
+                <p className="erp-empty-state">No blended batches match.</p>
+              )}
             </div>
           )}
         </section>

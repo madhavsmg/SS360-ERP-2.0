@@ -26,8 +26,8 @@ export default function DashboardPage() {
           <strong>{formatKg(metrics.rawKg)}</strong>
           <small>{formatMoney(metrics.rawValue)} at cost</small>
         </div>
-        <div className="erp-stat dashboard-stat finished-stock">
-          <span>Finished Products</span>
+        <div className="erp-stat dashboard-stat blended-stock">
+          <span>Blended Batches</span>
           <strong>{formatKg(metrics.finishedKg)}</strong>
           <small>{formatMoney(metrics.finishedValue)} at cost</small>
         </div>

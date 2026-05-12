@@ -38,7 +38,7 @@ The goal is simple: stop retyping tea invoices, stock ledgers, bag counts, GST n
 
 ### QR Stock Ledger
 
-- Generate QR codes for raw tea lots and finished blend batches using `qrcode`.
+- Generate QR codes for raw tea lots and blended batches using `qrcode`.
 - Print the selected QR label directly from the Inventory screen.
 - Lookup stock by pasting a QR payload or stock ID.
 - Track lot IDs, supplier, grade, remaining kg, landed cost/kg, and movement history.
@@ -52,14 +52,14 @@ The goal is simple: stop retyping tea invoices, stock ledgers, bag counts, GST n
 
 ### Production
 
-- Blend multiple raw tea lots into finished products.
+- Blend multiple raw tea lots into blended batches.
 - Decrement raw lot stock automatically.
 - Calculate raw material cost, packing cost, labor, overhead, total cost, cost/kg, revenue, expected profit, and margin.
-- Preserve traceability from finished batch back to source raw lots.
+- Preserve traceability from blended batch back to source raw lots.
 
 ### Sales, POS, Customers, and Shipping
 
-- Sell finished blends or direct raw tea stock.
+- Sell blended batches or direct raw tea stock.
 - Automatically reduce stock when a sale is created.
 - Calculate revenue, COGS, profit, customer outstanding, and shipment records.
 - Maintain customer profiles, credit limits, delivery preferences, payments, and order history.
@@ -68,7 +68,7 @@ The goal is simple: stop retyping tea invoices, stock ledgers, bag counts, GST n
 
 ### Dashboard
 
-- Show raw stock, finished stock, inventory value, sales revenue, profit, open shipments, and low-stock alerts.
+- Show raw stock, blended stock, inventory value, sales revenue, profit, open shipments, and low-stock alerts.
 - Surface pending shipments and recent order profitability.
 - Keep operational visibility tied to the same ERP data model used by the modules.
 
@@ -94,7 +94,7 @@ The frontend is still resilient in offline/demo mode with React Context and `loc
 | UI | CSS, lucide-react | Enterprise-style screens, icons, forms, tables, alerts, and QR label surfaces |
 | Client state | React Context, localStorage | Local-first ERP state and browser fallback continuity |
 | Invoice parsing | pdfjs-dist, pdf-parse, tesseract.js | Browser and Node PDF text extraction plus OCR fallback |
-| QR labels | qrcode | Printable QR labels for raw lots and finished batches |
+| QR labels | qrcode | Printable QR labels for raw lots and blended batches |
 | Backend | Node.js, Express, CORS, dotenv | Local API layer for upload, extraction, approval, and service coordination |
 | Database | PostgreSQL, Prisma | Persistent invoice, supplier, and raw lot records |
 | Uploads | multer | Local invoice file storage under `backend/uploads/invoices` |

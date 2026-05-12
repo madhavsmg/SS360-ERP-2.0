@@ -353,7 +353,7 @@ export default function ProductionPage() {
     event.preventDefault();
 
     if (!form.productName.trim()) {
-      setMessage('Enter a finished product name.');
+      setMessage('Enter a blend product name.');
       return;
     }
 
@@ -371,7 +371,7 @@ export default function ProductionPage() {
       {
         title: 'Create blend batch?',
         description:
-          'This will deduct the selected raw bags from inventory and add the finished blend stock.',
+          'This will deduct the selected raw bags from inventory and add the blended batch stock.',
         details: [
           { label: 'Product', value: form.productName.trim() },
           { label: 'Draft Bags', value: draftBagCount },
@@ -389,7 +389,7 @@ export default function ProductionPage() {
           setMessage(
             `${batch.productName} created with ${formatKg(
               batch.batchKg
-            )} finished stock and ${formatMoney(batch.costPerKg)}/kg cost.`
+            )} blended stock and ${formatMoney(batch.costPerKg)}/kg cost.`
           );
         } catch (error) {
           setMessage(error.message);
@@ -406,7 +406,7 @@ export default function ProductionPage() {
           <h1>QR Blending & Batch Costing</h1>
           <p>
             Scan godown bags into a blend draft, estimate cost before approval, and post the
-            finished blend into inventory only when the mix works.
+            blended batch into inventory only when the mix works.
           </p>
         </div>
       </header>
@@ -726,7 +726,7 @@ export default function ProductionPage() {
 
       <div className="erp-panel production-trace-panel">
         <div className="erp-panel-title">
-          <h2>Finished Batch Traceability</h2>
+          <h2>Blended Batch Traceability</h2>
         </div>
         <div className="erp-table table-production">
           <div className="erp-row head">

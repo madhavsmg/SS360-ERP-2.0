@@ -1547,7 +1547,7 @@ export function EnterpriseProvider({ children }) {
     });
 
     if (!form.productName.trim()) {
-      throw new Error('Enter a finished product name.');
+      throw new Error('Enter a blend product name.');
     }
 
     if (preview.batchKg <= 0) {

@@ -8,7 +8,7 @@ const inventoryTabs = [
   {
     to: '/inventory',
     label: 'Stock Ledger',
-    description: 'Raw lots, finished batches, QR labels',
+    description: 'Raw lots, blended batches, QR labels',
     icon: Boxes,
     end: true,
   },

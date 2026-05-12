@@ -103,7 +103,7 @@ export default function SalesPage() {
           <span className="erp-kicker">Sales</span>
           <h1>Orders & POS</h1>
           <p>
-            Sell finished blends or direct wholesale raw tea bags, then automatically update stock,
+            Sell blended batches or direct wholesale raw tea bags, then automatically update stock,
             customer balances, profit, and shipment queue.
           </p>
         </div>
@@ -141,7 +141,7 @@ export default function SalesPage() {
                   updateForm('pricePerKg', '');
                 }}
               >
-                <option value="blend">Finished blend</option>
+                <option value="blend">Blended batch</option>
                 <option value="raw">Direct raw tea sale</option>
               </select>
             </label>
