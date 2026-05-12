@@ -22,7 +22,7 @@ function App() {
               <Route path="/" element={<DashboardPage />} />
               <Route path="/suppliers" element={<SuppliersPage />} />
               <Route path="/customers" element={<CustomersPage />} />
-              <Route path="/inventory" element={<InventoryPage />} />
+              <Route path="/inventory/*" element={<InventoryPage />} />
               <Route path="/production" element={<ProductionPage />} />
               <Route path="/sales" element={<SalesPage />} />
               <Route path="/shipping" element={<ShippingPage />} />

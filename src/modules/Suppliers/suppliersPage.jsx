@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { HandCoins } from 'lucide-react';
+import { useConfirmationDialog } from '../../components/ConfirmationDialog';
 import { useEnterprise } from '../../context/EnterpriseContext';
 import { formatKg, formatMoney } from '../../utils/formatters';
 
@@ -7,383 +9,400 @@ const supplierFormDefaults = {
   agentName: '',
   phone: '',
   region: '',
-  paymentTerms: '15 days',
-  reliabilityScore: '80',
-  qualityScore: '80',
+  paymentTerms: '7 days',
+  gstin: '',
+  address: '',
 };
 
-const purchaseFormDefaults = {
+const paymentDefaults = {
   supplierId: '',
-  variety: '',
-  grade: '',
-  orderBags: '',
-  bagWeightKg: '35',
-  ratePerKg: '',
-  expectedDate: '',
-  taste: '8',
-  color: '8',
-  aroma: '8',
-  sampleApproved: 'true',
-};
-
-const receiveFormDefaults = {
-  purchaseOrderId: '',
-  receivedBags: '',
-  reorderKg: '75',
-  receivedDate: '',
+  amount: '',
+  paymentDate: '',
+  mode: 'Bank transfer',
+  reference: '',
 };
 
 export default function SuppliersPage() {
-  const {
-    data,
-    addSupplier,
-    createPurchaseOrder,
-    receivePurchaseOrder,
-    recordSupplierPayment,
-    numberValue,
-  } = useEnterprise();
+  const { data, addSupplier, recordSupplierPayment, today, numberValue } = useEnterprise();
   const [supplierForm, setSupplierForm] = useState(supplierFormDefaults);
-  const [purchaseForm, setPurchaseForm] = useState(purchaseFormDefaults);
-  const [receiveForm, setReceiveForm] = useState(receiveFormDefaults);
-  const [payment, setPayment] = useState({ supplierId: '', amount: '' });
+  const [payment, setPayment] = useState(() => ({ ...paymentDefaults, paymentDate: today }));
   const [message, setMessage] = useState('');
-  const openPurchaseOrders = useMemo(
-    () => data.purchaseOrders.filter((order) => order.status !== 'Received'),
-    [data.purchaseOrders]
-  );
+  const { confirmationDialog, requestConfirmation } = useConfirmationDialog();
 
-  function updateForm(setter, field, value) {
-    setter((currentForm) => ({ ...currentForm, [field]: value }));
+  const supplierLedger = useMemo(() => {
+    return data.suppliers.map((supplier) => {
+      const supplierLots = data.rawLots.filter((lot) => lot.supplierId === supplier.id);
+      const supplierPayments = (data.supplierPayments || []).filter(
+        (entry) => entry.supplierId === supplier.id
+      );
+      const suppliedKg = supplierLots.reduce(
+        (total, lot) => total + numberValue(lot.receivedKg),
+        0
+      );
+      const lastLot = supplierLots[0] || null;
+      const lastPayment = supplierPayments[0] || null;
+
+      return {
+        supplier,
+        suppliedKg,
+        lastLot,
+        lastPayment,
+      };
+    });
+  }, [data.rawLots, data.supplierPayments, data.suppliers, numberValue]);
+
+  const supplierStats = useMemo(() => {
+    const totalOutstanding = data.suppliers.reduce(
+      (total, supplier) => total + numberValue(supplier.outstanding),
+      0
+    );
+    const totalPayments = (data.supplierPayments || []).reduce(
+      (total, entry) => total + numberValue(entry.amount),
+      0
+    );
+    const suppliersWithBalance = data.suppliers.filter(
+      (supplier) => numberValue(supplier.outstanding) > 0
+    ).length;
+
+    return {
+      supplierCount: data.suppliers.length,
+      suppliersWithBalance,
+      totalOutstanding,
+      totalPayments,
+    };
+  }, [data.supplierPayments, data.suppliers, numberValue]);
+  const selectedPaymentSupplier = data.suppliers.find(
+    (supplier) => supplier.id === payment.supplierId
+  );
+  const selectedOutstanding = selectedPaymentSupplier
+    ? numberValue(selectedPaymentSupplier.outstanding)
+    : 0;
+  const paymentAmount = numberValue(payment.amount);
+  const selectedSupplierHasDue = Boolean(selectedPaymentSupplier) && selectedOutstanding > 0;
+  const paymentExceedsOutstanding = selectedSupplierHasDue && paymentAmount > selectedOutstanding;
+  const canSubmitPayment =
+    selectedSupplierHasDue && paymentAmount > 0 && !paymentExceedsOutstanding;
+
+  function updateSupplierForm(field, value) {
+    setSupplierForm((currentForm) => ({ ...currentForm, [field]: value }));
+  }
+
+  function updatePayment(field, value) {
+    setPayment((currentPayment) => ({ ...currentPayment, [field]: value }));
+  }
+
+  function selectPaymentSupplier(supplierId) {
+    setPayment((currentPayment) => ({
+      ...currentPayment,
+      supplierId,
+      amount: '',
+      reference: '',
+    }));
+  }
+
+  function useFullDueAmount() {
+    if (!selectedSupplierHasDue) {
+      return;
+    }
+
+    setPayment((currentPayment) => ({
+      ...currentPayment,
+      amount: String(Math.round(selectedOutstanding * 100) / 100),
+    }));
+    setMessage('');
   }
 
   function submitSupplier(event) {
     event.preventDefault();
 
-    try {
-      const supplier = addSupplier(supplierForm);
-      setSupplierForm(supplierFormDefaults);
-      setPurchaseForm((currentForm) => ({ ...currentForm, supplierId: supplier.id }));
-      setMessage(`${supplier.name} added as a supplier.`);
-    } catch (error) {
-      setMessage(error.message);
+    if (!supplierForm.name.trim()) {
+      setMessage('Supplier name is required.');
+      return;
     }
-  }
 
-  function submitPurchaseOrder(event) {
-    event.preventDefault();
-
-    try {
-      const order = createPurchaseOrder(purchaseForm);
-      setPurchaseForm({ ...purchaseFormDefaults, supplierId: order.supplierId });
-      setReceiveForm((currentForm) => ({
-        ...currentForm,
-        purchaseOrderId: order.id,
-        receivedBags: String(order.orderBags),
-      }));
-      setMessage(`${order.id} created after sample approval.`);
-    } catch (error) {
-      setMessage(error.message);
-    }
-  }
-
-  function submitReceiving(event) {
-    event.preventDefault();
-
-    try {
-      const lot = receivePurchaseOrder(receiveForm);
-      setReceiveForm(receiveFormDefaults);
-      setMessage(`${lot.id} received and added to Inventory with QR tracking.`);
-    } catch (error) {
-      setMessage(error.message);
-    }
+    requestConfirmation(
+      {
+        title: 'Add supplier to ledger?',
+        description:
+          'This creates a supplier master record that can receive invoice payables and payments.',
+        details: [
+          { label: 'Supplier', value: supplierForm.name.trim() },
+          { label: 'Region', value: supplierForm.region || 'Not set' },
+          { label: 'Terms', value: supplierForm.paymentTerms || '7 days' },
+        ],
+        confirmLabel: 'Add Supplier',
+      },
+      () => {
+        try {
+          const supplier = addSupplier(supplierForm);
+          setSupplierForm(supplierFormDefaults);
+          setPayment((currentPayment) => ({ ...currentPayment, supplierId: supplier.id }));
+          setMessage(`${supplier.name} added to the supplier ledger.`);
+        } catch (error) {
+          setMessage(error.message);
+        }
+      }
+    );
   }
 
   function submitPayment(event) {
     event.preventDefault();
 
-    try {
-      recordSupplierPayment(payment.supplierId, payment.amount);
-      setPayment({ supplierId: payment.supplierId, amount: '' });
-      setMessage('Supplier payment recorded.');
-    } catch (error) {
-      setMessage(error.message);
+    const supplier = data.suppliers.find((item) => item.id === payment.supplierId);
+    const paymentAmount = numberValue(payment.amount);
+
+    if (!supplier) {
+      setMessage('Select a supplier before recording payment.');
+      return;
     }
+
+    if (paymentAmount <= 0) {
+      setMessage('Payment amount must be greater than zero.');
+      return;
+    }
+
+    const supplierOutstanding = numberValue(supplier.outstanding);
+
+    if (supplierOutstanding <= 0) {
+      setMessage(`${supplier.name} has no outstanding balance. Payment cannot be recorded.`);
+      return;
+    }
+
+    if (paymentAmount > supplierOutstanding) {
+      setMessage(
+        `Payment cannot exceed ${supplier.name}'s outstanding balance of ${formatMoney(
+          supplierOutstanding
+        )}.`
+      );
+      return;
+    }
+
+    requestConfirmation(
+      {
+        title: 'Record supplier payment?',
+        description:
+          'This will post a payment entry and reduce the supplier outstanding balance.',
+        details: [
+          { label: 'Supplier', value: supplier.name },
+          { label: 'Outstanding', value: formatMoney(supplierOutstanding) },
+          { label: 'Amount', value: formatMoney(paymentAmount) },
+          { label: 'Balance After', value: formatMoney(supplierOutstanding - paymentAmount) },
+          { label: 'Mode', value: payment.mode || 'Bank transfer' },
+          { label: 'Reference', value: payment.reference || 'Not provided' },
+        ],
+        confirmLabel: 'Record Payment',
+      },
+      () => {
+        try {
+          const paymentRecord = recordSupplierPayment(payment);
+          setPayment({
+            ...paymentDefaults,
+            supplierId: paymentRecord.supplierId,
+            paymentDate: today,
+            mode: payment.mode,
+          });
+          setMessage(
+            `${formatMoney(paymentRecord.amount)} recorded for ${paymentRecord.supplierName}.`
+          );
+        } catch (error) {
+          setMessage(error.message);
+        }
+      }
+    );
   }
 
   return (
-    <section className="erp-page">
+    <section className="erp-page supplier-module">
       <header className="erp-header">
         <div>
-          <span className="erp-kicker">Procurement</span>
-          <h1>Suppliers & Purchase Orders</h1>
+          <span className="erp-kicker">Suppliers</span>
+          <h1>Supplier Ledger & Payments</h1>
           <p>
-            Approve tea samples, place purchase orders, receive bags, and track supplier balances.
+            Maintain supplier details, payable balances, and payment records while stock intake
+            stays inside the Inventory invoice workflow.
           </p>
         </div>
       </header>
 
-      {message && <p className="erp-message">{message}</p>}
-
-      <div className="erp-workspace equal">
-        <form className="erp-panel" onSubmit={submitSupplier}>
-          <div className="erp-panel-title">
-            <h2>Add Supplier</h2>
-          </div>
-          <div className="erp-form-grid">
-            <label>
-              <span>Name</span>
-              <input
-                value={supplierForm.name}
-                onChange={(event) => updateForm(setSupplierForm, 'name', event.target.value)}
-              />
-            </label>
-            <label>
-              <span>Agent</span>
-              <input
-                value={supplierForm.agentName}
-                onChange={(event) => updateForm(setSupplierForm, 'agentName', event.target.value)}
-              />
-            </label>
-            <label>
-              <span>Phone</span>
-              <input
-                value={supplierForm.phone}
-                onChange={(event) => updateForm(setSupplierForm, 'phone', event.target.value)}
-              />
-            </label>
-            <label>
-              <span>Region</span>
-              <input
-                value={supplierForm.region}
-                onChange={(event) => updateForm(setSupplierForm, 'region', event.target.value)}
-              />
-            </label>
-            <label>
-              <span>Terms</span>
-              <input
-                value={supplierForm.paymentTerms}
-                onChange={(event) =>
-                  updateForm(setSupplierForm, 'paymentTerms', event.target.value)
-                }
-              />
-            </label>
-            <label>
-              <span>Reliability</span>
-              <input
-                min="0"
-                max="100"
-                type="number"
-                value={supplierForm.reliabilityScore}
-                onChange={(event) =>
-                  updateForm(setSupplierForm, 'reliabilityScore', event.target.value)
-                }
-              />
-            </label>
-          </div>
-          <button className="erp-button" type="submit">
-            Add Supplier
-          </button>
-        </form>
-
-        <form className="erp-panel" onSubmit={submitPurchaseOrder}>
-          <div className="erp-panel-title">
-            <h2>Create Purchase Order</h2>
-          </div>
-          <label>
-            <span>Supplier</span>
-            <select
-              value={purchaseForm.supplierId}
-              onChange={(event) => updateForm(setPurchaseForm, 'supplierId', event.target.value)}
-            >
-              <option value="">Select supplier</option>
-              {data.suppliers.map((supplier) => (
-                <option key={supplier.id} value={supplier.id}>
-                  {supplier.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="erp-form-grid">
-            <label>
-              <span>Variety</span>
-              <input
-                value={purchaseForm.variety}
-                onChange={(event) => updateForm(setPurchaseForm, 'variety', event.target.value)}
-              />
-            </label>
-            <label>
-              <span>Grade</span>
-              <input
-                value={purchaseForm.grade}
-                onChange={(event) => updateForm(setPurchaseForm, 'grade', event.target.value)}
-              />
-            </label>
-            <label>
-              <span>Bags</span>
-              <input
-                min="0"
-                type="number"
-                value={purchaseForm.orderBags}
-                onChange={(event) => updateForm(setPurchaseForm, 'orderBags', event.target.value)}
-              />
-            </label>
-            <label>
-              <span>Bag kg</span>
-              <input
-                min="0"
-                step="0.01"
-                type="number"
-                value={purchaseForm.bagWeightKg}
-                onChange={(event) => updateForm(setPurchaseForm, 'bagWeightKg', event.target.value)}
-              />
-            </label>
-            <label>
-              <span>Rate/kg</span>
-              <input
-                min="0"
-                step="0.01"
-                type="number"
-                value={purchaseForm.ratePerKg}
-                onChange={(event) => updateForm(setPurchaseForm, 'ratePerKg', event.target.value)}
-              />
-            </label>
-            <label>
-              <span>Expected</span>
-              <input
-                type="date"
-                value={purchaseForm.expectedDate}
-                onChange={(event) =>
-                  updateForm(setPurchaseForm, 'expectedDate', event.target.value)
-                }
-              />
-            </label>
-          </div>
-          <div className="erp-form-grid three">
-            <label>
-              <span>Taste</span>
-              <input
-                min="0"
-                max="10"
-                type="number"
-                value={purchaseForm.taste}
-                onChange={(event) => updateForm(setPurchaseForm, 'taste', event.target.value)}
-              />
-            </label>
-            <label>
-              <span>Color</span>
-              <input
-                min="0"
-                max="10"
-                type="number"
-                value={purchaseForm.color}
-                onChange={(event) => updateForm(setPurchaseForm, 'color', event.target.value)}
-              />
-            </label>
-            <label>
-              <span>Aroma</span>
-              <input
-                min="0"
-                max="10"
-                type="number"
-                value={purchaseForm.aroma}
-                onChange={(event) => updateForm(setPurchaseForm, 'aroma', event.target.value)}
-              />
-            </label>
-          </div>
-          <button className="erp-button" type="submit">
-            Create PO
-          </button>
-        </form>
+      <div className="erp-summary-grid">
+        <div className="erp-stat">
+          <span>Total Suppliers</span>
+          <strong>{supplierStats.supplierCount}</strong>
+          <small>vendors in the ledger</small>
+        </div>
+        <div className="erp-stat">
+          <span>Outstanding</span>
+          <strong>{formatMoney(supplierStats.totalOutstanding)}</strong>
+          <small>{supplierStats.suppliersWithBalance} suppliers with balance</small>
+        </div>
+        <div className="erp-stat">
+          <span>Payments Posted</span>
+          <strong>{formatMoney(supplierStats.totalPayments)}</strong>
+          <small>{(data.supplierPayments || []).length} payment entries</small>
+        </div>
+        <div className="erp-stat">
+          <span>Active Lots</span>
+          <strong>{data.rawLots.length}</strong>
+          <small>linked to supplier stock history</small>
+        </div>
       </div>
 
-      <div className="erp-workspace">
-        <div className="erp-panel">
-          <div className="erp-panel-title">
-            <h2>Purchase Orders</h2>
-          </div>
-          <div className="erp-table table-purchase">
-            <div className="erp-row head">
-              <span>PO</span>
-              <span>Qty</span>
-              <span>Rate</span>
-              <span>Total</span>
-              <span>Status</span>
+      {message && <p className="erp-message">{message}</p>}
+
+      <div className="erp-workspace supplier-workspace">
+        <div className="supplier-main-column">
+          <section className="erp-panel supplier-ledger-panel">
+            <div className="erp-panel-title">
+              <h2>Supplier Ledger</h2>
             </div>
-            {data.purchaseOrders.map((order) => (
-              <button
-                className="erp-row"
-                key={order.id}
-                type="button"
-                onClick={() =>
-                  setReceiveForm((currentForm) => ({
-                    ...currentForm,
-                    purchaseOrderId: order.id,
-                    receivedBags: String(order.orderBags),
-                  }))
-                }
-              >
-                <span>
-                  <strong>{order.variety}</strong>
-                  <small>
-                    {order.grade} | {order.supplierName}
-                  </small>
-                </span>
-                <span>{formatKg(order.orderedKg)}</span>
-                <span>{formatMoney(order.ratePerKg)}</span>
-                <span>{formatMoney(order.totalCost)}</span>
-                <span className={order.status === 'Received' ? 'erp-pill' : 'erp-pill warning'}>
-                  {order.status}
-                </span>
-              </button>
-            ))}
-          </div>
+            <div className="erp-table table-supplier-ledger">
+              <div className="erp-row head">
+                <span>Supplier</span>
+                <span>Region</span>
+                <span>Terms</span>
+                <span>Supplied</span>
+                <span>Outstanding</span>
+                <span>Last Payment</span>
+              </div>
+              {supplierLedger.map(({ supplier, suppliedKg, lastLot, lastPayment }) => (
+                <button
+                  className="erp-row"
+                  key={supplier.id}
+                  type="button"
+                  onClick={() => updatePayment('supplierId', supplier.id)}
+                >
+                  <span>
+                    <strong>{supplier.name}</strong>
+                    <small>
+                      {supplier.agentName || 'Contact pending'} | {supplier.phone || 'No phone'}
+                    </small>
+                  </span>
+                  <span>
+                    <strong>{supplier.region || 'Not set'}</strong>
+                    <small>{supplier.gstin || 'GSTIN pending'}</small>
+                  </span>
+                  <span>{supplier.paymentTerms || '7 days'}</span>
+                  <span>
+                    <strong>{formatKg(suppliedKg)}</strong>
+                    <small>{lastLot ? lastLot.receivedDate : 'No stock lots'}</small>
+                  </span>
+                  <span
+                    className={numberValue(supplier.outstanding) > 0 ? 'erp-loss' : 'erp-profit'}
+                  >
+                    {formatMoney(supplier.outstanding)}
+                  </span>
+                  <span>
+                    {lastPayment ? (
+                      <>
+                        <strong>{formatMoney(lastPayment.amount)}</strong>
+                        <small>{lastPayment.paymentDate}</small>
+                      </>
+                    ) : (
+                      'No payments'
+                    )}
+                  </span>
+                </button>
+              ))}
+              {!supplierLedger.length && (
+                <div className="erp-empty-state">No suppliers have been added yet.</div>
+              )}
+            </div>
+          </section>
+
+          <section className="erp-panel supplier-payments-panel">
+            <div className="erp-panel-title">
+              <h2>Payment History</h2>
+            </div>
+            <div className="erp-table table-supplier-payments">
+              <div className="erp-row head">
+                <span>Supplier</span>
+                <span>Date</span>
+                <span>Mode</span>
+                <span>Reference</span>
+                <span>Amount</span>
+              </div>
+              {(data.supplierPayments || []).map((entry) => (
+                <div className="erp-row" key={entry.id}>
+                  <span>
+                    <strong>{entry.supplierName}</strong>
+                    <small>{entry.note || 'Supplier payment'}</small>
+                  </span>
+                  <span>{entry.paymentDate}</span>
+                  <span>{entry.mode}</span>
+                  <span>{entry.reference || 'Not provided'}</span>
+                  <span className="erp-profit">{formatMoney(entry.amount)}</span>
+                </div>
+              ))}
+              {!(data.supplierPayments || []).length && (
+                <div className="erp-empty-state">No supplier payments have been posted yet.</div>
+              )}
+            </div>
+          </section>
         </div>
 
-        <aside className="erp-panel">
-          <div className="erp-panel-title">
-            <h2>Receive Goods</h2>
-          </div>
-          <form onSubmit={submitReceiving}>
+        <aside className="supplier-action-stack">
+          <form className="erp-panel" onSubmit={submitSupplier}>
+            <div className="erp-panel-title">
+              <h2>Add Supplier</h2>
+            </div>
             <label>
-              <span>Open PO</span>
-              <select
-                value={receiveForm.purchaseOrderId}
-                onChange={(event) =>
-                  updateForm(setReceiveForm, 'purchaseOrderId', event.target.value)
-                }
-              >
-                <option value="">Select PO</option>
-                {openPurchaseOrders.map((order) => (
-                  <option key={order.id} value={order.id}>
-                    {order.variety} - {order.orderBags} bags
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span>Received bags</span>
+              <span>Supplier name</span>
               <input
-                min="0"
-                type="number"
-                value={receiveForm.receivedBags}
-                onChange={(event) => updateForm(setReceiveForm, 'receivedBags', event.target.value)}
+                value={supplierForm.name}
+                onChange={(event) => updateSupplierForm('name', event.target.value)}
               />
             </label>
+            <div className="erp-form-grid supplier-form-grid">
+              <label>
+                <span>Contact person</span>
+                <input
+                  value={supplierForm.agentName}
+                  onChange={(event) => updateSupplierForm('agentName', event.target.value)}
+                />
+              </label>
+              <label>
+                <span>Phone</span>
+                <input
+                  value={supplierForm.phone}
+                  onChange={(event) => updateSupplierForm('phone', event.target.value)}
+                />
+              </label>
+              <label>
+                <span>Region</span>
+                <input
+                  value={supplierForm.region}
+                  onChange={(event) => updateSupplierForm('region', event.target.value)}
+                />
+              </label>
+              <label>
+                <span>Payment terms</span>
+                <input
+                  value={supplierForm.paymentTerms}
+                  onChange={(event) => updateSupplierForm('paymentTerms', event.target.value)}
+                />
+              </label>
+              <label>
+                <span>GSTIN</span>
+                <input
+                  value={supplierForm.gstin}
+                  onChange={(event) => updateSupplierForm('gstin', event.target.value)}
+                />
+              </label>
+            </div>
             <label>
-              <span>Reorder kg</span>
-              <input
-                min="0"
-                type="number"
-                value={receiveForm.reorderKg}
-                onChange={(event) => updateForm(setReceiveForm, 'reorderKg', event.target.value)}
+              <span>Address</span>
+              <textarea
+                rows="3"
+                value={supplierForm.address}
+                onChange={(event) => updateSupplierForm('address', event.target.value)}
               />
             </label>
             <button className="erp-button" type="submit">
-              Receive & Create Lot
+              Add Supplier
             </button>
           </form>
 
-          <form onSubmit={submitPayment}>
+          <form className="erp-panel" onSubmit={submitPayment}>
             <div className="erp-panel-title">
               <h2>Supplier Payment</h2>
             </div>
@@ -391,7 +410,7 @@ export default function SuppliersPage() {
               <span>Supplier</span>
               <select
                 value={payment.supplierId}
-                onChange={(event) => setPayment({ ...payment, supplierId: event.target.value })}
+                onChange={(event) => selectPaymentSupplier(event.target.value)}
               >
                 <option value="">Select supplier</option>
                 {data.suppliers.map((supplier) => (
@@ -401,48 +420,81 @@ export default function SuppliersPage() {
                 ))}
               </select>
             </label>
-            <label>
-              <span>Amount</span>
-              <input
-                min="0"
-                type="number"
-                value={payment.amount}
-                onChange={(event) => setPayment({ ...payment, amount: event.target.value })}
-              />
-            </label>
-            <button className="erp-button secondary" type="submit">
+            {selectedPaymentSupplier && (
+              <p
+                className={
+                  paymentExceedsOutstanding ? 'erp-muted-note erp-loss' : 'erp-muted-note'
+                }
+              >
+                {selectedSupplierHasDue
+                  ? paymentExceedsOutstanding
+                    ? `Payment cannot exceed the due amount of ${formatMoney(selectedOutstanding)}.`
+                    : `Outstanding due: ${formatMoney(selectedOutstanding)}.`
+                  : 'This supplier has no outstanding balance, so payment entry is disabled.'}
+              </p>
+            )}
+            <div className="erp-form-grid supplier-payment-grid">
+              <label>
+                <span>Amount</span>
+                <input
+                  min="0"
+                  max={selectedSupplierHasDue ? selectedOutstanding : undefined}
+                  step="0.01"
+                  type="number"
+                  disabled={!selectedSupplierHasDue}
+                  placeholder={selectedSupplierHasDue ? 'Enter amount due' : 'No due'}
+                  value={payment.amount}
+                  onChange={(event) => updatePayment('amount', event.target.value)}
+                />
+              </label>
+              <button
+                className="supplier-due-button"
+                disabled={!selectedSupplierHasDue}
+                title="Fill the full outstanding due amount"
+                type="button"
+                onClick={useFullDueAmount}
+              >
+                <HandCoins size={14} />
+                Use Due
+              </button>
+              <label>
+                <span>Date</span>
+                <input
+                  type="date"
+                  disabled={!selectedSupplierHasDue}
+                  value={payment.paymentDate}
+                  onChange={(event) => updatePayment('paymentDate', event.target.value)}
+                />
+              </label>
+              <label>
+                <span>Mode</span>
+                <select
+                  disabled={!selectedSupplierHasDue}
+                  value={payment.mode}
+                  onChange={(event) => updatePayment('mode', event.target.value)}
+                >
+                  <option>Bank transfer</option>
+                  <option>UPI</option>
+                  <option>Cash</option>
+                  <option>Cheque</option>
+                </select>
+              </label>
+              <label className="supplier-payment-reference">
+                <span>Reference</span>
+                <input
+                  disabled={!selectedSupplierHasDue}
+                  value={payment.reference}
+                  onChange={(event) => updatePayment('reference', event.target.value)}
+                />
+              </label>
+            </div>
+            <button className="erp-button secondary" disabled={!canSubmitPayment} type="submit">
               Record Payment
             </button>
           </form>
         </aside>
       </div>
-
-      <div className="erp-panel">
-        <div className="erp-panel-title">
-          <h2>Supplier Ledger</h2>
-        </div>
-        <div className="erp-table table-supplier">
-          <div className="erp-row head">
-            <span>Supplier</span>
-            <span>Region</span>
-            <span>Reliability</span>
-            <span>Quality</span>
-            <span>Outstanding</span>
-          </div>
-          {data.suppliers.map((supplier) => (
-            <div className="erp-row" key={supplier.id}>
-              <span>
-                <strong>{supplier.name}</strong>
-                <small>{supplier.agentName}</small>
-              </span>
-              <span>{supplier.region}</span>
-              <span>{numberValue(supplier.reliabilityScore)}%</span>
-              <span>{numberValue(supplier.qualityScore)}%</span>
-              <span>{formatMoney(supplier.outstanding)}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      {confirmationDialog}
     </section>
   );
 }

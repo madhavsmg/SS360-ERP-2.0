@@ -31,7 +31,6 @@ model Invoice {
   approvedAt       DateTime?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
-  purchaseOrders   PurchaseOrder[]
   rawLots          RawInventoryLot[]
 }
 
@@ -44,40 +43,12 @@ model Supplier {
   outstanding    Float             @default(0)
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
-  purchaseOrders PurchaseOrder[]
   rawLots        RawInventoryLot[]
-}
-
-model PurchaseOrder {
-  id               String   @id
-  invoiceId        String
-  supplierId       String
-  supplierName     String
-  invoiceNumber    String
-  variety          String
-  grade            String
-  orderBags        Float
-  bagWeightKg      Float
-  ratePerKg        Float
-  orderedKg        Float
-  receivedKg       Float
-  expectedDate     DateTime
-  status           String
-  goodsAmount      Float
-  allocatedCharges Float
-  landedCostPerKg  Float
-  totalCost        Float
-  paidAmount       Float    @default(0)
-  sampleJson       Json?
-  createdAt        DateTime @default(now())
-  invoice          Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  supplier         Supplier @relation(fields: [supplierId], references: [id])
 }
 
 model RawInventoryLot {
   id                     String   @id
   invoiceId              String
-  purchaseOrderId        String
   supplierId             String
   supplierName           String
   variety                String

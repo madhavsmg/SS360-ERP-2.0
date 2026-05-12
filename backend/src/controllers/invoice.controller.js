@@ -115,7 +115,6 @@ export async function approveInvoice(request, response, next) {
     response.json({
       success: true,
       invoice: approval.invoice,
-      purchaseOrders: approval.purchaseOrders,
       rawLots: approval.rawLots,
       supplier: approval.supplier,
     });

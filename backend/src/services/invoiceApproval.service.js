@@ -51,33 +51,9 @@ export async function approveInvoiceDraft(invoice, draft) {
       },
     });
 
-    const purchaseOrders = lineRecords.map((line) => ({
-      id: line.purchaseOrderId,
-      invoiceId: invoice.id,
-      supplierId: supplier.id,
-      supplierName: supplier.name,
-      invoiceNumber,
-      variety: line.variety,
-      grade: line.grade,
-      orderBags: line.bags,
-      bagWeightKg: line.bagWeightKg,
-      ratePerKg: line.ratePerKg,
-      orderedKg: line.receivedKg,
-      receivedKg: line.receivedKg,
-      expectedDate: new Date(invoiceDate),
-      status: 'Received',
-      goodsAmount: line.goodsAmount,
-      allocatedCharges: line.allocatedCharges,
-      landedCostPerKg: line.landedCostPerKg,
-      totalCost: line.landedCost,
-      paidAmount: 0,
-      sampleJson: { taste: 8, color: 8, aroma: 8, approved: true },
-    }));
-
     const rawLots = lineRecords.map((line) => ({
       id: line.rawLotId,
       invoiceId: invoice.id,
-      purchaseOrderId: line.purchaseOrderId,
       supplierId: supplier.id,
       supplierName: supplier.name,
       variety: line.variety,
@@ -105,7 +81,6 @@ export async function approveInvoiceDraft(invoice, draft) {
       ],
     }));
 
-    await tx.purchaseOrder.createMany({ data: purchaseOrders });
     await tx.rawInventoryLot.createMany({ data: rawLots });
 
     const approvedJson = {
@@ -133,7 +108,6 @@ export async function approveInvoiceDraft(invoice, draft) {
       netTotal: totals.netTotal,
       approvedAt: today(),
       status: 'Approved',
-      purchaseOrderIds: purchaseOrders.map((order) => order.id),
       rawLotIds: rawLots.map((lot) => lot.id),
       lineItems: lineRecords.map((line) => line.lineItemJson),
       rawText: normalized.rawText || '',
@@ -152,7 +126,6 @@ export async function approveInvoiceDraft(invoice, draft) {
     return {
       invoice: updatedInvoice,
       supplier,
-      purchaseOrders,
       rawLots,
       approvedJson,
     };
@@ -181,24 +154,22 @@ function normalizeDraft(draft) {
 }
 
 
-function buildLineRecords({ draft, invoice, invoiceDate, invoiceNumber }) {
+function buildLineRecords({ draft, invoice, invoiceDate }) {
   const totalReceivedKg = draft.items.reduce((total, item) => total + lineNumbers(item).receivedKg, 0);
   const miscChargesTotal =
     numberValue(draft.totals.miscChargesTotal) ||
     draft.charges.reduce((total, charge) => total + numberValue(charge.amount), 0);
 
-  return draft.items.map((item, index) => {
+  return draft.items.map((item) => {
     const numbers = lineNumbers(item);
     const allocationRatio = totalReceivedKg > 0 ? numbers.receivedKg / totalReceivedKg : 1 / draft.items.length;
     const allocatedCharges = roundMoney(miscChargesTotal * allocationRatio);
     const landedCost = roundMoney(numbers.taxableValue + allocatedCharges);
     const landedCostPerKg = numbers.receivedKg > 0 ? roundMoney(landedCost / numbers.receivedKg) : 0;
     const grade = item.grade || item.hsn || 'Invoice';
-    const purchaseOrderId = makeId('PO', `${item.teaName}-${invoiceNumber}-${index + 1}`);
     const rawLotId = makeId('RAW', `${item.teaName}-${grade}`);
 
     return {
-      purchaseOrderId,
       rawLotId,
       variety: item.teaName,
       grade,
@@ -232,7 +203,6 @@ function buildLineRecords({ draft, invoice, invoiceDate, invoiceNumber }) {
         igstAmount: numbers.igstAmount,
         lineTotal: numbers.lineTotal,
         rawLotId,
-        purchaseOrderId,
         invoiceId: invoice.id,
         invoiceDate,
       },

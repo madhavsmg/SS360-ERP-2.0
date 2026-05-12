@@ -18,7 +18,7 @@
   <img alt="ESLint" src="https://img.shields.io/badge/ESLint-Prettier-4B32C3?logo=eslint&logoColor=white" />
 </p>
 
-SS360 ERP 2.0 is a local-first, full-stack ERP workspace built for Siva Sai Tea Enterprises. It connects tea supplier purchasing, invoice OCR, raw lot inventory, QR labels, blend production, sales/POS, customer balances, and shipping into one workflow.
+SS360 ERP 2.0 is a local-first, full-stack ERP workspace built for Siva Sai Tea Enterprises. It connects the supplier ledger, invoice OCR, raw lot inventory, QR labels, blend production, sales/POS, customer balances, and shipping into one workflow.
 
 The goal is simple: stop retyping tea invoices, stock ledgers, bag counts, GST numbers, and shipping updates by hand. The app reads invoices, turns reviewed data into inventory lots, calculates landed cost, prints QR labels, decrements stock through production and sales, and keeps operational dashboards current.
 
@@ -34,7 +34,7 @@ The goal is simple: stop retyping tea invoices, stock ledgers, bag counts, GST n
 - Parse supplier name, GSTIN, phone, address, invoice number, invoice date, tea names, grades, HSN, bags, kg per bag, received kg, rate/kg, taxable value, GST, charges, and payable totals.
 - Show a human review screen before anything is posted.
 - Approve reviewed invoices into PostgreSQL and mirror them into the frontend ERP state.
-- Automatically create supplier ledger entries, received purchase orders, raw inventory lots, landed-cost values, and stock movement history.
+- Automatically create supplier ledger entries, raw inventory lots, landed-cost values, and stock movement history.
 
 ### QR Stock Ledger
 
@@ -44,11 +44,10 @@ The goal is simple: stop retyping tea invoices, stock ledgers, bag counts, GST n
 - Track lot IDs, supplier, grade, remaining kg, landed cost/kg, and movement history.
 - Highlight low-stock raw lots based on reorder thresholds.
 
-### Procurement
+### Suppliers
 
-- Add suppliers with region, agent, payment terms, reliability, quality, and outstanding balance.
-- Create purchase orders only after sample approval details are entered.
-- Receive goods into raw tea inventory.
+- Add suppliers with contact details, region, payment terms, GSTIN, address, and outstanding balance.
+- Keep the supplier ledger focused on vendor details, payable balances, and stock history.
 - Record supplier payments and reduce outstanding balances.
 
 ### Production
@@ -69,7 +68,7 @@ The goal is simple: stop retyping tea invoices, stock ledgers, bag counts, GST n
 
 ### Dashboard
 
-- Show raw stock, finished stock, inventory value, sales revenue, profit, open work, and low-stock alerts.
+- Show raw stock, finished stock, inventory value, sales revenue, profit, open shipments, and low-stock alerts.
 - Surface pending shipments and recent order profitability.
 - Keep operational visibility tied to the same ERP data model used by the modules.
 
@@ -85,7 +84,7 @@ flowchart LR
   Browser -->|Local operational mirror| LocalStorage["localStorage ss360.enterpriseData.v1"]
 ```
 
-The frontend is still resilient in offline/demo mode with React Context and `localStorage`. The backend currently persists the invoice intake workflow: uploaded files, OCR JSON, reviewed approval JSON, suppliers, purchase orders, and raw inventory lots.
+The frontend is still resilient in offline/demo mode with React Context and `localStorage`. The backend currently persists the invoice intake workflow: uploaded files, OCR JSON, reviewed approval JSON, suppliers, and raw inventory lots.
 
 ## Tech Stack
 
@@ -97,7 +96,7 @@ The frontend is still resilient in offline/demo mode with React Context and `loc
 | Invoice parsing | pdfjs-dist, pdf-parse, tesseract.js | Browser and Node PDF text extraction plus OCR fallback |
 | QR labels | qrcode | Printable QR labels for raw lots and finished batches |
 | Backend | Node.js, Express, CORS, dotenv | Local API layer for upload, extraction, approval, and service coordination |
-| Database | PostgreSQL, Prisma | Persistent invoice, supplier, purchase order, and raw lot records |
+| Database | PostgreSQL, Prisma | Persistent invoice, supplier, and raw lot records |
 | Uploads | multer | Local invoice file storage under `backend/uploads/invoices` |
 | OCR service | Python, FastAPI, Uvicorn | Free local OCR API without paid cloud OCR calls |
 | OCR engine | PaddleOCR, OpenCV, Pillow, NumPy, PyMuPDF | Image preprocessing, PDF page conversion, OCR, text layout, and parsing |
@@ -112,7 +111,7 @@ The frontend is still resilient in offline/demo mode with React Context and `loc
 | Calculate bags and kg manually | Bag specs like `17 x 40` become bags, kg per bag, and received kg |
 | Split GST and charges by spreadsheet | Parser captures GST, cart/coolie, transport, labour, and misc charges |
 | Calculate landed stock cost manually | Approval allocates acquisition charges into landed cost/kg |
-| Create stock lots manually | Approval creates received POs and raw inventory lots automatically |
+| Create stock lots manually | Approval creates raw inventory lots automatically |
 | Print labels from another tool | Inventory generates printable QR labels in the app |
 | Update stock after blending and sales | Production and Sales decrement stock automatically |
 | Track delivery separately | Sales creates shipments and Shipping updates order state |
@@ -152,7 +151,7 @@ The frontend is still resilient in offline/demo mode with React Context and `loc
 - `POST /api/invoices` uploads PDF/image files and creates an `Invoice` row.
 - `POST /api/invoices/:id/extract` extracts embedded PDF text or calls the OCR service.
 - `POST /api/invoices/:id/approve` validates the reviewed draft and persists approval results.
-- Prisma models: `Invoice`, `Supplier`, `PurchaseOrder`, and `RawInventoryLot`.
+- Prisma models: `Invoice`, `Supplier`, and `RawInventoryLot`.
 - Upload limit: 25 MB.
 - Supported upload types: PDF, PNG, JPG, JPEG.
 
@@ -188,7 +187,6 @@ The frontend is still resilient in offline/demo mode with React Context and `loc
 | --- | --- |
 | `Invoice` | Upload metadata, raw text, extraction JSON, review JSON, approval JSON, OCR status, confidence, approval timestamp |
 | `Supplier` | Vendor profile, GSTIN, address, phone, outstanding balance |
-| `PurchaseOrder` | One approved invoice stock line as a received purchase order with goods amount and allocated charges |
 | `RawInventoryLot` | Received tea lot with bags, kg, remaining kg, landed cost, quality JSON, and movement JSON |
 
 ## Local Setup
@@ -279,7 +277,48 @@ OCR_USE_GPU=false
 
 ## Run The Full Stack
 
-Start each service in its own terminal.
+### One-Click Windows Launcher
+
+Double-click this file from the repo root:
+
+```text
+Start-SS360.cmd
+```
+
+The launcher starts the whole local system from one point:
+
+- Docker PostgreSQL container `ss360-postgres` on `localhost:5432`
+- Prisma migrations for the backend database
+- Express backend on `http://127.0.0.1:5000`
+- FastAPI OCR service on `http://127.0.0.1:8001`
+- Vite frontend on `http://127.0.0.1:5174`
+- Route smoke checks for the main ERP pages
+- Browser open to `http://127.0.0.1:5174/inventory`
+
+To stop the app services, double-click:
+
+```text
+Stop-SS360.cmd
+```
+
+The stop script leaves PostgreSQL running so the next launch is faster. To stop PostgreSQL too:
+
+```bash
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/stop-ss360.ps1 -StopDatabase
+```
+
+Terminal equivalents:
+
+```bash
+npm run system:start
+npm run system:stop
+```
+
+Logs are written under `logs/`.
+
+### Manual Service Startup
+
+If you want to run services by hand, start each service in its own terminal.
 
 ### Terminal 1: OCR Service
 

@@ -1,11 +1,15 @@
 .erp-page {
   display: grid;
   width: 100%;
-  max-width: 1440px;
-  gap: 16px;
+  max-width: 1540px;
+  min-width: 0;
+  gap: 14px;
   margin: 0 auto;
   color: var(--text);
+  font-size: 0.88rem;
   text-align: left;
+  overflow-x: clip;
+  overflow-wrap: anywhere;
 }
 
 .erp-page * {
@@ -21,19 +25,20 @@
 
 .erp-page h1 {
   color: var(--text);
-  font-size: clamp(1.45rem, 2vw, 2rem);
+  font-size: clamp(1.25rem, 1.65vw, 1.72rem);
   line-height: 1.1;
+  overflow-wrap: break-word;
 }
 
 .erp-page h2 {
   color: var(--text);
-  font-size: 1rem;
+  font-size: 0.92rem;
   line-height: 1.2;
 }
 
 .erp-page h3 {
   color: var(--text);
-  font-size: 0.95rem;
+  font-size: 0.86rem;
 }
 
 .erp-page button,
@@ -45,12 +50,12 @@
 
 .erp-page label {
   display: grid;
-  gap: 6px;
+  gap: 5px;
 }
 
 .erp-page label span {
   color: var(--muted);
-  font-size: 0.75rem;
+  font-size: 0.68rem;
   font-weight: 760;
 }
 
@@ -58,12 +63,14 @@
 .erp-page select,
 .erp-page textarea {
   width: 100%;
-  min-height: 40px;
+  min-width: 0;
+  min-height: 34px;
   border: 1px solid var(--line-strong);
-  border-radius: 8px;
-  padding: 8px 10px;
+  border-radius: 7px;
+  padding: 6px 9px;
   background: #ffffff;
   color: var(--text);
+  font-size: 0.84rem;
   outline: none;
   transition:
     border-color 0.15s ease,
@@ -85,8 +92,9 @@
 .erp-header,
 .erp-panel,
 .erp-stat {
+  max-width: 100%;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.96);
   box-shadow: var(--shadow);
 }
@@ -95,21 +103,26 @@
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 16px;
-  padding: 18px 20px;
+  gap: 14px;
+  padding: 16px 18px;
+}
+
+.erp-header > div {
+  min-width: 0;
 }
 
 .erp-header p {
   max-width: 760px;
   margin-top: 6px;
   color: var(--muted);
+  font-size: 0.88rem;
 }
 
 .erp-kicker {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
   color: var(--gold);
-  font-size: 0.74rem;
+  font-size: 0.66rem;
   font-weight: 860;
   letter-spacing: 0.03em;
   text-transform: uppercase;
@@ -130,13 +143,13 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  min-height: 38px;
+  min-height: 34px;
   border: 1px solid transparent;
-  border-radius: 8px;
-  padding: 8px 12px;
+  border-radius: 7px;
+  padding: 7px 10px;
   background: var(--brand);
   color: #ffffff;
-  font-size: 0.88rem;
+  font-size: 0.8rem;
   font-weight: 780;
   line-height: 1;
   transition:
@@ -166,6 +179,16 @@
   color: var(--brand-dark);
 }
 
+.erp-button.secondary.danger {
+  color: var(--danger);
+}
+
+.erp-button.secondary.danger:hover {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
 .erp-button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
@@ -178,6 +201,51 @@
   color: var(--brand-dark);
 }
 
+.inventory-subnav {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.inventory-subnav-link {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #ffffff;
+  color: var(--muted-strong);
+  text-decoration: none;
+  box-shadow: var(--shadow);
+}
+
+.inventory-subnav-link:hover,
+.inventory-subnav-link.active {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+}
+
+.inventory-subnav-link span,
+.inventory-subnav-link strong,
+.inventory-subnav-link small {
+  display: block;
+  min-width: 0;
+}
+
+.inventory-subnav-link strong {
+  color: inherit;
+  font-size: 0.82rem;
+}
+
+.inventory-subnav-link small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
 .erp-summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -185,8 +253,8 @@
 }
 
 .erp-stat {
-  min-height: 102px;
-  padding: 16px;
+  min-height: 82px;
+  padding: 12px 14px;
 }
 
 .erp-stat span,
@@ -196,27 +264,37 @@
 }
 
 .erp-stat span {
-  font-size: 0.76rem;
+  font-size: 0.68rem;
   font-weight: 820;
   text-transform: uppercase;
 }
 
 .erp-stat strong {
   display: block;
-  margin-top: 8px;
+  margin-top: 6px;
   color: var(--text);
-  font-size: 1.25rem;
+  font-size: 1.08rem;
   line-height: 1.1;
 }
 
 .erp-stat small {
   margin-top: 4px;
-  font-size: 0.8rem;
+  font-size: 0.72rem;
+}
+
+.erp-empty-state {
+  margin: 0;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 0.82rem;
 }
 
 .erp-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
   gap: 14px;
   align-items: start;
 }
@@ -228,22 +306,22 @@
 .erp-panel {
   display: grid;
   min-width: 0;
-  gap: 14px;
-  padding: 16px;
+  gap: 11px;
+  padding: 14px;
 }
 
 .erp-panel form,
 .erp-page form {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .erp-panel-title {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  min-height: 32px;
+  gap: 10px;
+  min-height: 28px;
 }
 
 .erp-panel-title label {
@@ -253,7 +331,7 @@
 .erp-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 9px 10px;
 }
 
 .erp-form-grid.three {
@@ -264,28 +342,49 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.erp-input-icon {
+  position: relative;
+}
+
+.erp-input-icon svg {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  color: var(--muted);
+  transform: translateY(-50%);
+}
+
+.erp-input-icon input {
+  padding-left: 34px;
+}
+
 .erp-table {
-  overflow-x: auto;
+  overflow-x: hidden;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 8px;
   background: #ffffff;
 }
 
+.table-invoice {
+  overflow-x: auto;
+}
+
 .erp-row {
-  --erp-row-columns: minmax(220px, 1.45fr) 120px 120px 120px 120px;
+  --erp-row-columns: minmax(0, 1.55fr) repeat(4, minmax(0, 0.75fr));
   display: grid;
   grid-template-columns: var(--erp-row-columns);
   align-items: center;
   width: 100%;
-  min-width: 760px;
-  min-height: 58px;
-  gap: 12px;
+  min-width: 0;
+  min-height: 46px;
+  gap: 9px;
   border: 0;
   border-bottom: 1px solid #edf1ee;
   border-radius: 0;
-  padding: 11px 14px;
+  padding: 8px 12px;
   background: #ffffff;
   color: var(--text);
+  font-size: 0.82rem;
   text-align: left;
 }
 
@@ -302,10 +401,10 @@ button.erp-row:hover {
   position: sticky;
   top: 0;
   z-index: 1;
-  min-height: 40px;
+  min-height: 34px;
   background: var(--surface-muted);
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: 0.66rem;
   font-weight: 860;
   text-transform: uppercase;
 }
@@ -315,10 +414,15 @@ button.erp-row:hover {
   display: block;
 }
 
+.erp-row strong {
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
+
 .erp-row small {
   overflow-wrap: anywhere;
   color: var(--muted);
-  font-size: 0.76rem;
+  font-size: 0.68rem;
 }
 
 .erp-row > span {
@@ -329,29 +433,56 @@ button.erp-row:hover {
   font-variant-numeric: tabular-nums;
 }
 
+.erp-row > span:first-child {
+  justify-self: stretch;
+}
+
+.table-purchase .erp-row > span:nth-child(n + 2),
+.table-inventory .erp-row > span:nth-child(n + 2),
+.table-production .erp-row > span:nth-child(n + 2),
+.table-production-bags .erp-row > span:nth-child(n + 2),
+.table-sales .erp-row > span:nth-child(n + 2),
+.table-supplier .erp-row > span:nth-child(n + 3),
+.table-customer .erp-row > span:nth-child(3),
+.table-customer .erp-row > span:nth-child(4),
+.table-shipping .erp-row > span:nth-child(5) {
+  justify-self: end;
+  text-align: right;
+}
+
+.table-customer .erp-row > span:nth-child(5),
+.table-shipping .erp-row > span:nth-child(2),
+.table-shipping .erp-row > span:nth-child(3),
+.table-shipping .erp-row > span:nth-child(4) {
+  justify-self: stretch;
+  text-align: left;
+}
+
 .table-compact .erp-row {
-  min-height: 52px;
+  min-height: 44px;
 }
 
 .table-purchase .erp-row {
-  --erp-row-columns: minmax(240px, 1.6fr) 110px 120px 120px 116px;
+  --erp-row-columns: minmax(0, 2fr) minmax(0, 0.58fr) minmax(0, 0.54fr) minmax(0, 0.7fr) minmax(0, 0.62fr);
 }
 
 .table-supplier .erp-row {
-  --erp-row-columns: minmax(240px, 1.5fr) 120px 110px 100px 130px;
+  --erp-row-columns: minmax(0, 1.75fr) minmax(0, 0.76fr) minmax(0, 0.62fr) minmax(0, 0.58fr) minmax(0, 0.82fr);
 }
 
 .table-customer .erp-row {
-  --erp-row-columns: minmax(250px, 1.55fr) 120px 130px 130px minmax(150px, 1fr);
+  --erp-row-columns: minmax(0, 1.55fr) minmax(0, 0.58fr) minmax(0, 0.58fr) minmax(0, 0.66fr) minmax(0, 1.06fr);
 }
 
 .table-inventory .erp-row {
-  --erp-row-columns: minmax(250px, 1.6fr) 120px 120px 120px 120px;
+  --erp-row-columns: minmax(0, 1.8fr) minmax(0, 0.58fr) minmax(0, 0.58fr) minmax(0, 0.58fr) minmax(0, 0.62fr);
 }
 
 .table-invoice .erp-row {
-  --erp-row-columns: minmax(220px, 1.6fr) 84px 92px 124px 104px 136px 88px 88px 88px 112px 48px;
-  min-width: 1230px;
+  --erp-row-columns: minmax(0, 1.55fr) minmax(0, 0.42fr) minmax(0, 0.55fr) minmax(0, 0.58fr) minmax(0, 0.52fr) minmax(0, 0.68fr) minmax(0, 0.45fr) minmax(0, 0.45fr) minmax(0, 0.45fr) minmax(0, 0.58fr) 34px;
+  min-width: 0;
+  gap: 6px;
+  padding: 7px 8px;
 }
 
 .table-invoice .erp-row.invoice-row {
@@ -362,8 +493,8 @@ button.erp-row:hover {
 .table-invoice .invoice-row input,
 .table-invoice .invoice-row select {
   min-height: 34px;
-  padding: 6px 8px;
-  font-size: 0.78rem;
+  padding: 6px;
+  font-size: 0.74rem;
 }
 
 .table-invoice .invoice-row > span:first-child {
@@ -371,19 +502,23 @@ button.erp-row:hover {
   gap: 6px;
 }
 
+.table-invoice .erp-row.head {
+  font-size: 0.58rem;
+}
+
 .erp-inline-section {
   display: grid;
   gap: 10px;
-  margin-top: 16px;
+  margin-top: 8px;
 }
 
 .erp-panel-title.compact {
-  min-height: 34px;
+  min-height: 30px;
 }
 
 .erp-panel-title h3 {
   margin: 0;
-  font-size: 0.96rem;
+  font-size: 0.84rem;
 }
 
 .erp-charge-grid {
@@ -401,16 +536,39 @@ button.erp-row:hover {
 .erp-muted-note {
   margin: 0;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.8rem;
 }
 
 .table-production .erp-row,
 .table-sales .erp-row {
-  --erp-row-columns: minmax(260px, 1.7fr) 110px 120px 120px 120px;
+  --erp-row-columns: minmax(0, 1.75fr) minmax(0, 0.52fr) minmax(0, 0.64fr) minmax(0, 0.64fr) minmax(0, 0.64fr);
+}
+
+.table-production-bags .erp-row {
+  --erp-row-columns: minmax(0, 1.65fr) minmax(0, 0.36fr) minmax(0, 0.5fr) minmax(0, 0.5fr) minmax(0, 0.58fr) 38px;
+  min-width: 0;
+}
+
+.production-scanner {
+  display: grid;
+  gap: 8px;
+}
+
+.production-scanner > div {
+  overflow: hidden;
+  min-height: 280px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #111816;
+}
+
+.production-scanner span {
+  color: var(--muted);
+  font-size: 0.82rem;
 }
 
 .table-shipping .erp-row {
-  --erp-row-columns: minmax(250px, 1.5fr) 130px 150px 130px 120px;
+  --erp-row-columns: minmax(0, 1.62fr) minmax(0, 0.72fr) minmax(0, 0.82fr) minmax(0, 0.72fr) minmax(0, 0.62fr);
 }
 
 .erp-pill {
@@ -418,12 +576,12 @@ button.erp-row:hover {
   align-items: center;
   justify-content: center;
   width: max-content;
-  min-height: 26px;
+  min-height: 22px;
   border-radius: 999px;
-  padding: 4px 9px;
+  padding: 3px 7px;
   background: var(--brand-soft);
   color: var(--brand-dark);
-  font-size: 0.72rem;
+  font-size: 0.62rem;
   font-weight: 860;
   text-transform: uppercase;
   white-space: nowrap;
@@ -447,16 +605,115 @@ button.erp-row:hover {
 .erp-message {
   border: 1px solid #f1d7a7;
   border-left: 4px solid var(--gold);
-  border-radius: 8px;
-  padding: 10px 12px;
+  border-radius: 7px;
+  padding: 8px 10px;
   background: #fff9ee;
   color: #654307;
+  font-size: 0.82rem;
+}
+
+.erp-confirm-backdrop {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(14, 24, 18, 0.46);
+}
+
+.erp-confirm-dialog {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  width: min(480px, 100%);
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  background: #ffffff;
+  box-shadow: 0 24px 70px rgba(16, 30, 21, 0.28);
+}
+
+.erp-confirm-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--gold-soft);
+  color: var(--gold);
+}
+
+.erp-confirm-dialog.danger .erp-confirm-icon {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.erp-confirm-content {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+}
+
+.erp-confirm-content h2,
+.erp-confirm-content p {
+  margin: 0;
+}
+
+.erp-confirm-content h2 {
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.erp-confirm-content p {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.erp-confirm-details {
+  display: grid;
+  gap: 6px;
+  margin: 2px 0 0;
+}
+
+.erp-confirm-details div {
+  display: grid;
+  grid-template-columns: minmax(98px, 0.45fr) minmax(0, 1fr);
+  gap: 10px;
+  border-top: 1px solid #edf1ee;
+  padding-top: 6px;
+}
+
+.erp-confirm-details dt,
+.erp-confirm-details dd {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.erp-confirm-details dt {
+  color: var(--muted);
+  font-weight: 760;
+}
+
+.erp-confirm-details dd {
+  color: var(--text);
+  font-weight: 820;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.erp-confirm-actions {
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .erp-cost-list,
 .erp-mini-list {
   display: grid;
-  gap: 8px;
+  gap: 7px;
   margin: 0;
 }
 
@@ -464,9 +721,9 @@ button.erp-row:hover {
 .erp-mini-list div {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   border-bottom: 1px solid #edf1ee;
-  padding-bottom: 8px;
+  padding-bottom: 7px;
 }
 
 .erp-cost-list dt,
@@ -494,10 +751,10 @@ button.erp-row:hover {
 
 .erp-qr-box {
   display: grid;
-  min-height: 226px;
+  min-height: 212px;
   place-items: center;
   border: 1px dashed #b7c5bb;
-  border-radius: 10px;
+  border-radius: 8px;
   background: var(--surface-soft);
 }
 
@@ -540,7 +797,7 @@ button.erp-row:hover {
 
 .erp-page label.erp-upload-tile span {
   color: inherit;
-  font-size: 0.86rem;
+  font-size: 0.78rem;
 }
 
 .erp-file-input {
@@ -594,6 +851,259 @@ button.erp-row:hover {
 
 .invoice-summary {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.invoice-intake-workspace,
+.invoice-register-workspace {
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+}
+
+.dashboard-workspace {
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.65fr);
+}
+
+.dashboard-workspace .erp-panel {
+  min-height: 150px;
+  align-content: start;
+}
+
+.supplier-workspace {
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
+}
+
+.supplier-main-column,
+.supplier-action-stack {
+  display: grid;
+  min-width: 0;
+  gap: 14px;
+  align-content: start;
+}
+
+.supplier-action-stack {
+  position: sticky;
+  top: 16px;
+}
+
+.supplier-module .erp-panel {
+  gap: 10px;
+}
+
+.supplier-module .erp-row {
+  min-height: 42px;
+}
+
+.supplier-action-stack .erp-button {
+  width: 100%;
+}
+
+.supplier-payment-grid {
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: end;
+}
+
+.supplier-due-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 34px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  padding: 6px 9px;
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+  font-size: 0.72rem;
+  font-weight: 840;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.supplier-due-button:hover {
+  border-color: var(--brand);
+  background: #ffffff;
+}
+
+.supplier-due-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.supplier-payment-reference {
+  grid-column: 2 / -1;
+}
+
+.supplier-ledger-panel,
+.supplier-payments-panel {
+  align-content: start;
+}
+
+.table-supplier-ledger .erp-row {
+  --erp-row-columns: minmax(0, 1.45fr) minmax(0, 0.7fr) minmax(0, 0.58fr) minmax(0, 0.68fr) minmax(0, 0.72fr) minmax(0, 0.72fr);
+}
+
+.table-supplier-payments .erp-row {
+  --erp-row-columns: minmax(0, 1.4fr) minmax(0, 0.62fr) minmax(0, 0.64fr) minmax(0, 0.86fr) minmax(0, 0.62fr);
+}
+
+.table-supplier-ledger .erp-row > span:nth-child(4),
+.table-supplier-ledger .erp-row > span:nth-child(5),
+.table-supplier-payments .erp-row > span:nth-child(5) {
+  justify-self: end;
+  text-align: right;
+}
+
+.table-supplier-ledger .erp-row > span:nth-child(6),
+.table-supplier-payments .erp-row > span:nth-child(2),
+.table-supplier-payments .erp-row > span:nth-child(3),
+.table-supplier-payments .erp-row > span:nth-child(4) {
+  justify-self: stretch;
+  text-align: left;
+}
+
+.procurement-entry-grid {
+  grid-template-columns: minmax(360px, 0.9fr) minmax(480px, 1.1fr);
+}
+
+.procurement-register-grid,
+.customer-workspace,
+.inventory-stock-workspace,
+.production-workspace,
+.sales-workspace,
+.shipping-workspace {
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
+}
+
+.customer-workspace {
+  align-items: start;
+}
+
+.customer-ledger-panel,
+.shipping-queue-panel {
+  align-content: start;
+}
+
+.erp-action-stack,
+.customer-action-stack {
+  display: grid;
+  min-width: 0;
+  gap: 16px;
+  align-content: start;
+}
+
+.erp-action-stack .erp-panel,
+.customer-action-stack .erp-panel,
+.production-cost-panel,
+.production-manual-panel,
+.sales-preview-panel,
+.shipping-update-panel,
+.erp-print-label {
+  align-content: start;
+}
+
+.production-cost-panel,
+.sales-preview-panel,
+.shipping-update-panel,
+.erp-print-label {
+  position: sticky;
+  top: 16px;
+}
+
+.production-builder-panel,
+.production-scanner-panel {
+  min-width: 0;
+}
+
+.production-trace-panel {
+  align-content: start;
+}
+
+.invoice-approval-summary,
+.invoice-detail-panel {
+  position: sticky;
+  top: 16px;
+}
+
+.inventory-toolbar {
+  align-items: end;
+}
+
+.inventory-stock-workspace .erp-print-label {
+  gap: 12px;
+}
+
+.inventory-action-stack {
+  display: grid;
+  gap: 8px;
+}
+
+.inventory-action-stack .erp-button {
+  width: 100%;
+}
+
+.inventory-tab-count {
+  display: inline-flex;
+  min-width: 22px;
+  min-height: 22px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #eef1f3;
+  color: var(--muted-strong);
+  font-size: 0.72rem;
+  font-weight: 860;
+}
+
+.erp-tab.active .inventory-tab-count {
+  background: #ffffff;
+  color: var(--brand-dark);
+}
+
+.invoice-register-list {
+  display: grid;
+  gap: 8px;
+}
+
+.invoice-list-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #ffffff;
+  color: var(--text);
+  text-align: left;
+}
+
+.invoice-list-row:hover,
+.invoice-list-row.active {
+  border-color: var(--brand);
+  background: var(--surface-soft);
+}
+
+.invoice-list-row strong,
+.invoice-list-row small {
+  display: block;
+  min-width: 0;
+}
+
+.invoice-list-row small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.invoice-revert-box,
+.invoice-detail-section {
+  display: grid;
+  gap: 10px;
+}
+
+.inventory-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
 }
 
 .erp-wide-field {
@@ -671,21 +1181,57 @@ button.erp-row:hover {
   }
 
   .erp-workspace,
-  .erp-workspace.equal {
+  .erp-workspace.equal,
+  .dashboard-workspace,
+  .supplier-workspace,
+  .procurement-entry-grid,
+  .procurement-register-grid,
+  .customer-workspace,
+  .inventory-stock-workspace,
+  .production-workspace,
+  .sales-workspace,
+  .shipping-workspace {
     grid-template-columns: 1fr;
+  }
+
+  .invoice-approval-summary,
+  .invoice-detail-panel,
+  .supplier-action-stack,
+  .production-cost-panel,
+  .sales-preview-panel,
+  .shipping-update-panel,
+  .erp-print-label {
+    position: static;
+  }
+
+  .table-invoice .erp-row {
+    min-width: 980px;
   }
 }
 
 @media (max-width: 760px) {
+  .erp-page {
+    width: 100%;
+    max-width: 100%;
+  }
+
   .erp-header {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .erp-header p {
+    max-width: 100%;
   }
 
   .erp-summary-grid,
   .erp-form-grid,
   .erp-form-grid.three,
   .erp-form-grid.four {
+    grid-template-columns: 1fr;
+  }
+
+  .inventory-subnav {
     grid-template-columns: 1fr;
   }
 
@@ -707,12 +1253,45 @@ button.erp-row:hover {
     grid-column: auto;
   }
 
+  .supplier-payment-reference {
+    grid-column: auto;
+  }
+
   .erp-panel-title label {
     width: 100%;
   }
 
   .erp-bar-row {
     grid-template-columns: 1fr;
+  }
+
+  .erp-table:not(.table-invoice) {
+    overflow-x: visible;
+  }
+
+  .erp-table:not(.table-invoice) .erp-row.head {
+    display: none;
+  }
+
+  .erp-table:not(.table-invoice) .erp-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    min-width: 0;
+    gap: 8px 12px;
+    padding: 12px;
+  }
+
+  .erp-table:not(.table-invoice) .erp-row > span:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .erp-table:not(.table-invoice) .erp-row > span:not(:first-child) {
+    justify-self: start;
+    text-align: left;
+  }
+
+  .erp-table:not(.table-invoice) .erp-row .erp-pill {
+    justify-self: start;
   }
 }
 

@@ -10,9 +10,12 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "preview": "vite preview",
-    "scan:invoices": "node scripts/extract-samples.js"
+    "scan:invoices": "node scripts/extract-samples.js",
+    "system:start": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-ss360.ps1",
+    "system:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/stop-ss360.ps1"
   },
   "dependencies": {
+    "html5-qrcode": "^2.3.8",
     "lucide-react": "^1.14.0",
     "pdf-parse": "^2.4.5",
     "pdfjs-dist": "^4.10.38",
