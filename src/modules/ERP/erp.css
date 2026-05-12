@@ -1,12 +1,12 @@
 .erp-page {
   display: grid;
   width: 100%;
-  max-width: 1540px;
+  max-width: none;
   min-width: 0;
-  gap: 14px;
+  gap: 16px;
   margin: 0 auto;
   color: var(--text);
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   text-align: left;
   overflow-x: clip;
   overflow-wrap: anywhere;
@@ -25,14 +25,14 @@
 
 .erp-page h1 {
   color: var(--text);
-  font-size: clamp(1.25rem, 1.65vw, 1.72rem);
+  font-size: clamp(1.34rem, 1.65vw, 1.86rem);
   line-height: 1.1;
   overflow-wrap: break-word;
 }
 
 .erp-page h2 {
   color: var(--text);
-  font-size: 0.92rem;
+  font-size: 0.94rem;
   line-height: 1.2;
 }
 
@@ -55,8 +55,9 @@
 
 .erp-page label span {
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-weight: 760;
+  text-transform: uppercase;
 }
 
 .erp-page input,
@@ -64,11 +65,11 @@
 .erp-page textarea {
   width: 100%;
   min-width: 0;
-  min-height: 34px;
+  min-height: 36px;
   border: 1px solid var(--line-strong);
-  border-radius: 7px;
-  padding: 6px 9px;
-  background: #ffffff;
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: rgba(255, 255, 255, 0.94);
   color: var(--text);
   font-size: 0.84rem;
   outline: none;
@@ -93,18 +94,24 @@
 .erp-panel,
 .erp-stat {
   max-width: 100%;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(191, 204, 191, 0.78);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: var(--shadow);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(16px);
 }
 
 .erp-header {
   display: flex;
-  align-items: flex-end;
+  min-height: 106px;
+  align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  padding: 16px 18px;
+  gap: 18px;
+  overflow: hidden;
+  padding: 18px 20px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.94), rgba(255, 248, 238, 0.82)),
+    linear-gradient(135deg, rgba(35, 109, 69, 0.08), rgba(217, 104, 72, 0.05));
 }
 
 .erp-header > div {
@@ -112,16 +119,17 @@
 }
 
 .erp-header p {
-  max-width: 760px;
+  max-width: 900px;
   margin-top: 6px;
   color: var(--muted);
-  font-size: 0.88rem;
+  font-size: 0.87rem;
+  line-height: 1.48;
 }
 
 .erp-kicker {
   display: block;
   margin-bottom: 5px;
-  color: var(--gold);
+  color: var(--brand);
   font-size: 0.66rem;
   font-weight: 860;
   letter-spacing: 0.03em;
@@ -133,7 +141,7 @@
 .erp-chip-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 7px;
 }
 
 .erp-button,
@@ -143,13 +151,13 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  min-height: 34px;
+  min-height: 36px;
   border: 1px solid transparent;
-  border-radius: 7px;
-  padding: 7px 10px;
+  border-radius: 8px;
+  padding: 8px 11px;
   background: var(--brand);
   color: #ffffff;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 780;
   line-height: 1;
   transition:
@@ -168,7 +176,7 @@
 .erp-tab,
 .erp-chip {
   border-color: var(--line-strong);
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.9);
   color: var(--muted-strong);
 }
 
@@ -199,12 +207,13 @@
   border-color: var(--brand);
   background: var(--brand-soft);
   color: var(--brand-dark);
+  box-shadow: inset 0 -2px 0 rgba(35, 109, 69, 0.22);
 }
 
 .inventory-subnav {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .inventory-subnav-link {
@@ -212,13 +221,13 @@
   min-width: 0;
   align-items: center;
   gap: 10px;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(191, 204, 191, 0.78);
   border-radius: 8px;
   padding: 10px 12px;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.9);
   color: var(--muted-strong);
   text-decoration: none;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-soft);
 }
 
 .inventory-subnav-link:hover,
@@ -248,13 +257,13 @@
 
 .erp-summary-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 10px;
 }
 
 .erp-stat {
-  min-height: 82px;
-  padding: 12px 14px;
+  min-height: 76px;
+  padding: 12px 13px;
 }
 
 .erp-stat span,
@@ -264,7 +273,7 @@
 }
 
 .erp-stat span {
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 820;
   text-transform: uppercase;
 }
@@ -273,7 +282,7 @@
   display: block;
   margin-top: 6px;
   color: var(--text);
-  font-size: 1.08rem;
+  font-size: 1.04rem;
   line-height: 1.1;
 }
 
@@ -287,15 +296,15 @@
   border: 1px dashed var(--line);
   border-radius: 8px;
   padding: 14px;
-  background: var(--surface-soft);
+  background: rgba(248, 250, 246, 0.84);
   color: var(--muted);
   font-size: 0.82rem;
 }
 
 .erp-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
-  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  gap: 16px;
   align-items: start;
 }
 
@@ -306,7 +315,7 @@
 .erp-panel {
   display: grid;
   min-width: 0;
-  gap: 11px;
+  gap: 12px;
   padding: 14px;
 }
 
@@ -321,7 +330,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  min-height: 28px;
+  min-height: 30px;
 }
 
 .erp-panel-title label {
@@ -331,7 +340,7 @@
 .erp-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 9px 10px;
+  gap: 10px;
 }
 
 .erp-form-grid.three {
@@ -359,10 +368,11 @@
 }
 
 .erp-table {
-  overflow-x: hidden;
-  border: 1px solid var(--line);
+  overflow-x: auto;
+  border: 1px solid rgba(191, 204, 191, 0.78);
   border-radius: 8px;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .table-invoice {
@@ -376,13 +386,13 @@
   align-items: center;
   width: 100%;
   min-width: 0;
-  min-height: 46px;
-  gap: 9px;
+  min-height: 48px;
+  gap: 10px;
   border: 0;
   border-bottom: 1px solid #edf1ee;
   border-radius: 0;
-  padding: 8px 12px;
-  background: #ffffff;
+  padding: 9px 12px;
+  background: rgba(255, 255, 255, 0.94);
   color: var(--text);
   font-size: 0.82rem;
   text-align: left;
@@ -394,16 +404,16 @@
 
 button.erp-row:hover {
   border-color: transparent;
-  background: var(--surface-soft);
+  background: #f8fbf6;
 }
 
 .erp-row.head {
   position: sticky;
   top: 0;
   z-index: 1;
-  min-height: 34px;
-  background: var(--surface-muted);
-  color: var(--muted);
+  min-height: 38px;
+  background: #edf4ed;
+  color: var(--muted-strong);
   font-size: 0.66rem;
   font-weight: 860;
   text-transform: uppercase;
@@ -415,7 +425,7 @@ button.erp-row:hover {
 }
 
 .erp-row strong {
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   overflow-wrap: anywhere;
 }
 
@@ -855,11 +865,11 @@ button.erp-row:hover {
 
 .invoice-intake-workspace,
 .invoice-register-workspace {
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
 }
 
 .dashboard-workspace {
-  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.65fr);
+  grid-template-columns: minmax(0, 1.5fr) minmax(300px, 0.58fr);
 }
 
 .dashboard-workspace .erp-panel {
@@ -868,20 +878,20 @@ button.erp-row:hover {
 }
 
 .supplier-workspace {
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
 }
 
 .supplier-main-column,
 .supplier-action-stack {
   display: grid;
   min-width: 0;
-  gap: 14px;
+  gap: 16px;
   align-content: start;
 }
 
 .supplier-action-stack {
   position: sticky;
-  top: 16px;
+  top: calc(var(--topbar-height) + 16px);
 }
 
 .supplier-module .erp-panel {
@@ -889,7 +899,7 @@ button.erp-row:hover {
 }
 
 .supplier-module .erp-row {
-  min-height: 42px;
+  min-height: 44px;
 }
 
 .supplier-action-stack .erp-button {
@@ -906,9 +916,9 @@ button.erp-row:hover {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  min-height: 34px;
+  min-height: 36px;
   border: 1px solid var(--line-strong);
-  border-radius: 7px;
+  border-radius: 8px;
   padding: 6px 9px;
   background: var(--brand-soft);
   color: var(--brand-dark);
@@ -970,7 +980,7 @@ button.erp-row:hover {
 .production-workspace,
 .sales-workspace,
 .shipping-workspace {
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
 }
 
 .customer-workspace {
@@ -1005,7 +1015,7 @@ button.erp-row:hover {
 .shipping-update-panel,
 .erp-print-label {
   position: sticky;
-  top: 16px;
+  top: calc(var(--topbar-height) + 16px);
 }
 
 .production-builder-panel,
@@ -1020,7 +1030,7 @@ button.erp-row:hover {
 .invoice-approval-summary,
 .invoice-detail-panel {
   position: sticky;
-  top: 16px;
+  top: calc(var(--topbar-height) + 16px);
 }
 
 .inventory-toolbar {

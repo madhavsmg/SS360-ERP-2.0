@@ -1,5 +1,4 @@
 import {
-  BarChart3,
   Boxes,
   Factory,
   LayoutDashboard,
@@ -8,6 +7,7 @@ import {
   ShoppingCart,
   Truck,
   Users,
+  UserCircle2,
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
@@ -24,7 +24,7 @@ const navigationItems = [
 
 export default function Sidebar() {
   return (
-    <aside className="app-sidebar">
+    <header className="app-sidebar">
       <div className="app-brand">
         <img className="app-brand-mark" src="/circle%20logo%20ss%20tea.png" alt="SS-360 Tea logo" />
         <div>
@@ -51,14 +51,10 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="app-sidebar-footer">
-        <img
-          className="app-sidebar-footer-icon"
-          src="/circle%20logo%20ss%20tea.png"
-          alt="SS-360 Tea"
-        />
-        <span>Local ERP workspace</span>
+      <div className="app-sidebar-footer" aria-label="User workspace">
+        <span>Local ERP</span>
+        <UserCircle2 aria-hidden="true" className="app-sidebar-footer-icon" strokeWidth={2.1} />
       </div>
-    </aside>
+    </header>
   );
 }
