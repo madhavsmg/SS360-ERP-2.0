@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, CheckCircle2, FileUp, Plus, ScanText, Trash2, X } from 'lucide-react';
+import { Camera, CheckCircle2, FileUp, Plus, Save, ScanText, Trash2, X } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useConfirmationDialog } from '../../components/ConfirmationDialog';
 import { useEnterprise } from '../../context/EnterpriseContext';
 import { formatKg, formatMoney } from '../../utils/formatters';
 import {
@@ -26,16 +28,26 @@ function progressLabel(progress) {
 }
 
 export default function InvoiceIntake() {
-  const { data, approveInvoiceReceipt, numberValue } = useEnterprise();
+  const { data, approveInvoiceReceipt, numberValue, saveInvoiceDraft } = useEnterprise();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [draft, setDraft] = useState(createEmptyInvoiceDraft);
+  const [loadedDraftId, setLoadedDraftId] = useState('');
   const [message, setMessage] = useState('');
   const [progress, setProgress] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [cameraStream, setCameraStream] = useState(null);
   const videoRef = useRef(null);
   const fileInputRef = useRef(null);
+  const { confirmationDialog, requestConfirmation } = useConfirmationDialog();
 
-  const approvedInvoices = data.invoiceReceipts || [];
+  const draftId = searchParams.get('draftId') || '';
+  const storedDraft = useMemo(() => {
+    return (data.invoiceDrafts || []).find((item) => item.id === draftId);
+  }, [data.invoiceDrafts, draftId]);
+  const correctionInvoice = draft.correctionOfInvoiceId
+    ? (data.invoiceReceipts || []).find((invoice) => invoice.id === draft.correctionOfInvoiceId)
+    : null;
   const reviewSummary = useMemo(() => {
     const stockLines = draft.items.filter((item) => item.teaName.trim());
     const receivedKg = stockLines.reduce((total, item) => {
@@ -70,12 +82,31 @@ export default function InvoiceIntake() {
 
       return item.teaName.trim() && quantity > 0 && receivedKg > 0 && ratePerKg > 0;
     });
+  const hasDraftContent =
+    draft.vendor.name.trim() ||
+    draft.invoice.number.trim() ||
+    draft.rawText.trim() ||
+    draft.items.some((item) => item.teaName?.trim() || item.grade?.trim());
 
   useEffect(() => {
     if (videoRef.current && cameraStream) {
       videoRef.current.srcObject = cameraStream;
     }
   }, [cameraStream]);
+
+  useEffect(() => {
+    if (!draftId || loadedDraftId === draftId) {
+      return;
+    }
+
+    if (storedDraft) {
+      setDraft(storedDraft);
+      setLoadedDraftId(draftId);
+      setMessage(`${storedDraft.invoice?.number || 'Draft'} opened for review.`);
+    } else {
+      setMessage('That invoice draft is no longer in the review queue.');
+    }
+  }, [draftId, loadedDraftId, storedDraft]);
 
   useEffect(() => {
     return () => {
@@ -160,6 +191,44 @@ export default function InvoiceIntake() {
     }));
   }
 
+  function clearDraft() {
+    setDraft(createEmptyInvoiceDraft());
+    setLoadedDraftId('');
+    setMessage('');
+    navigate('/inventory/intake', { replace: true });
+  }
+
+  function requestClearDraft() {
+    if (!hasDraftContent) {
+      clearDraft();
+      return;
+    }
+
+    requestConfirmation(
+      {
+        title: 'Clear invoice draft?',
+        description:
+          'This removes the current review fields from the screen. Save it first if you need the draft later.',
+        details: [
+          { label: 'Vendor', value: draft.vendor.name || 'Missing' },
+          { label: 'Invoice', value: draft.invoice.number || 'Pending' },
+          { label: 'Stock Lines', value: reviewSummary.stockLines },
+        ],
+        confirmLabel: 'Clear Draft',
+        tone: 'danger',
+      },
+      clearDraft
+    );
+  }
+
+  function saveDraft() {
+    const savedDraft = saveInvoiceDraft(draft);
+    setDraft(savedDraft);
+    setLoadedDraftId(savedDraft.id);
+    setMessage(`${savedDraft.invoice.number || 'Invoice draft'} saved for later review.`);
+    navigate(`/inventory/intake?draftId=${savedDraft.id}`, { replace: true });
+  }
+
   async function processFile(file) {
     if (!file) {
       return;
@@ -172,12 +241,18 @@ export default function InvoiceIntake() {
     try {
       const result = await extractInvoiceWithBackend(file, setProgress);
       setDraft(result.draft);
-      setMessage(`${file.name} extracted ${backendExtractionLabel(result.draft)}. Review all fields before approval.`);
+      setLoadedDraftId('');
+      navigate('/inventory/intake', { replace: true });
+      setMessage(
+        `${file.name} extracted ${backendExtractionLabel(result.draft)}. Review all fields before approval.`
+      );
     } catch (error) {
       try {
         setProgress({ label: 'Using browser OCR fallback', progress: 0.05 });
         const nextDraft = await extractInvoiceFromFile(file, setProgress);
         setDraft(nextDraft);
+        setLoadedDraftId('');
+        navigate('/inventory/intake', { replace: true });
         setMessage(`${fallbackMessage(error)} Browser OCR fallback extracted ${file.name}.`);
       } catch (fallbackError) {
         setMessage(fallbackError.message);
@@ -240,6 +315,8 @@ export default function InvoiceIntake() {
       const cameraFile = dataUrlToInvoiceFile(dataUrl, `camera-invoice-${Date.now()}.png`);
       const result = await extractInvoiceWithBackend(cameraFile, setProgress);
       setDraft(result.draft);
+      setLoadedDraftId('');
+      navigate('/inventory/intake', { replace: true });
       setMessage(
         'Camera capture extracted with local PaddleOCR. Review all fields before approval.'
       );
@@ -248,6 +325,8 @@ export default function InvoiceIntake() {
         const dataUrl = canvas.toDataURL('image/png');
         const nextDraft = await extractInvoiceFromImageDataUrl(dataUrl, setProgress);
         setDraft(nextDraft);
+        setLoadedDraftId('');
+        navigate('/inventory/intake', { replace: true });
         setMessage(`${fallbackMessage(error)} Browser OCR fallback extracted the camera capture.`);
       } catch (fallbackError) {
         setMessage(fallbackError.message);
@@ -268,11 +347,17 @@ export default function InvoiceIntake() {
         await approveBackendInvoice(draft.backendInvoiceId, draft);
       }
 
-      approveInvoiceReceipt(draft);
+      const result = approveInvoiceReceipt(draft);
       setMessage(
         `${draft.invoice.number || 'Invoice'} approved. ${reviewSummary.stockLines} raw stock lots posted.`
       );
       setDraft(createEmptyInvoiceDraft());
+      setLoadedDraftId('');
+      navigate('/inventory/invoices', {
+        state: {
+          invoiceId: result?.invoice?.id,
+        },
+      });
     } catch (error) {
       setMessage(error.message);
     } finally {
@@ -281,13 +366,38 @@ export default function InvoiceIntake() {
     }
   }
 
+  function requestApproveDraft() {
+    if (!canApprove) {
+      setMessage('Review vendor and stock line details before approval.');
+      return;
+    }
+
+    requestConfirmation(
+      {
+        title: 'Approve invoice to inventory?',
+        description:
+          'This will post the invoice, create raw stock lots, and increase the supplier payable balance.',
+        details: [
+          { label: 'Vendor', value: draft.vendor.name || 'Missing' },
+          { label: 'Invoice', value: draft.invoice.number || 'Unnumbered' },
+          { label: 'Received', value: formatKg(reviewSummary.receivedKg) },
+          { label: 'Payable', value: formatMoney(reviewSummary.netTotal) },
+        ],
+        confirmLabel: 'Approve to Inventory',
+      },
+      approveDraft
+    );
+  }
+
   return (
     <div className="erp-invoice-flow erp-no-print">
-      <div className="erp-workspace">
+      <div className="erp-workspace invoice-intake-workspace">
         <section className="erp-panel">
           <div className="erp-panel-title">
             <h2>Invoice Intake</h2>
-            <span className="erp-pill neutral">{draft.extractionMode || 'Waiting'}</span>
+            <span className="erp-pill neutral">
+              {draft.correctionOfInvoiceId ? 'Correction Draft' : draft.extractionMode || 'Waiting'}
+            </span>
           </div>
 
           <div className="erp-invoice-source">
@@ -315,7 +425,7 @@ export default function InvoiceIntake() {
             <button
               className="erp-button secondary"
               type="button"
-              onClick={() => setDraft(createEmptyInvoiceDraft())}
+              onClick={requestClearDraft}
             >
               <ScanText size={17} />
               Clear Draft
@@ -367,29 +477,56 @@ export default function InvoiceIntake() {
           </div>
         </section>
 
-        <aside className="erp-panel">
+        <aside className="erp-panel invoice-approval-summary">
           <div className="erp-panel-title">
-            <h2>Approved Invoices</h2>
+            <h2>Approval Summary</h2>
+            <span className="erp-pill neutral">{loadedDraftId ? 'Stored' : 'Unsaved'}</span>
           </div>
-          <div className="erp-trace-list">
-            {approvedInvoices.slice(0, 4).map((invoice) => (
-              <div key={invoice.id}>
-                <strong>{invoice.invoiceNumber}</strong>
-                <span>
-                  {invoice.supplierName} | {formatMoney(invoice.netTotal)} |{' '}
-                  {invoice.rawLotIds.length} lots
-                  {invoice.miscChargesTotal
-                    ? ` | ${formatMoney(invoice.miscChargesTotal)} charges`
-                    : ''}
-                </span>
-              </div>
-            ))}
-            {approvedInvoices.length === 0 && (
+          <dl className="erp-mini-list">
+            <div>
+              <dt>Vendor</dt>
+              <dd>{draft.vendor.name || 'Missing'}</dd>
+            </div>
+            <div>
+              <dt>Invoice</dt>
+              <dd>{draft.invoice.number || 'Pending'}</dd>
+            </div>
+            <div>
+              <dt>Received</dt>
+              <dd>{formatKg(reviewSummary.receivedKg)}</dd>
+            </div>
+            <div>
+              <dt>Payable</dt>
+              <dd>{formatMoney(reviewSummary.netTotal)}</dd>
+            </div>
+          </dl>
+          {correctionInvoice && (
+            <div className="erp-trace-list">
               <div>
-                <strong>No approved invoice receipts</strong>
-                <span>Reviewed invoices will appear here after posting.</span>
+                <strong>Correcting {correctionInvoice.invoiceNumber}</strong>
+                <span>{correctionInvoice.revertReason || 'Correction draft from reverted approval.'}</span>
               </div>
-            )}
+            </div>
+          )}
+          <div className="inventory-action-stack">
+            <button
+              className="erp-button secondary"
+              disabled={isProcessing}
+              type="button"
+              onClick={saveDraft}
+            >
+              <Save size={17} />
+              Save Draft
+            </button>
+            <button
+              className="erp-button"
+              disabled={!canApprove || isProcessing}
+              type="button"
+              onClick={requestApproveDraft}
+            >
+              <CheckCircle2 size={17} />
+              Approve to Inventory
+            </button>
           </div>
         </aside>
       </div>
@@ -399,15 +536,9 @@ export default function InvoiceIntake() {
       <section className="erp-panel">
         <div className="erp-panel-title">
           <h2>Human Review</h2>
-          <button
-            className="erp-button"
-            disabled={!canApprove || isProcessing}
-            type="button"
-            onClick={approveDraft}
-          >
-            <CheckCircle2 size={17} />
-            Approve to Inventory
-          </button>
+          <span className={canApprove ? 'erp-pill' : 'erp-pill warning'}>
+            {canApprove ? 'Ready' : 'Needs Review'}
+          </span>
         </div>
 
         <div className="erp-form-grid four">
@@ -628,6 +759,11 @@ export default function InvoiceIntake() {
                   value={item.grade}
                   onChange={(event) => updateItem(index, 'grade', event.target.value)}
                 />
+                <input
+                  placeholder="Bag breakup, e.g. 4 x 32, 3 x 21.5"
+                  value={item.bagBreakdown || ''}
+                  onChange={(event) => updateItem(index, 'bagBreakdown', event.target.value)}
+                />
               </span>
               <span>
                 <input
@@ -738,6 +874,7 @@ export default function InvoiceIntake() {
           }
         />
       </section>
+      {confirmationDialog}
     </div>
   );
 }

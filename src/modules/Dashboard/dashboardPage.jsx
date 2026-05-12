@@ -9,12 +9,12 @@ export default function DashboardPage() {
   const pendingShipments = data.shipments.filter((shipment) => shipment.status !== 'Delivered');
 
   return (
-    <section className="erp-page">
+    <section className="erp-page dashboard-module">
       <header className="erp-header">
         <div>
           <h1>Siva Sai Tea ERP</h1>
           <p>
-            Supplier purchasing, raw stock, blending, sales, shipping, and profit stay connected
+            Supplier ledger, invoice intake, raw stock, blending, sales, shipping, and profit stay connected
             from one dashboard.
           </p>
         </div>
@@ -37,13 +37,13 @@ export default function DashboardPage() {
           <small>{formatMoney(metrics.salesProfit)} profit</small>
         </div>
         <div className="erp-stat">
-          <span>Open Work</span>
-          <strong>{metrics.pendingPurchaseOrders + metrics.openShipments}</strong>
+          <span>Open Shipments</span>
+          <strong>{metrics.openShipments}</strong>
           <small>{metrics.lowRawLots} low-stock raw lots</small>
         </div>
       </div>
 
-      <div className="erp-workspace">
+      <div className="erp-workspace dashboard-workspace">
         <div className="erp-panel">
           <div className="erp-panel-title">
             <h2>Profit By Recent Orders</h2>

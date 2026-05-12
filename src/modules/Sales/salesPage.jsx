@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useConfirmationDialog } from '../../components/ConfirmationDialog';
 import { useEnterprise } from '../../context/EnterpriseContext';
 import { formatKg, formatMoney } from '../../utils/formatters';
 
@@ -15,9 +16,10 @@ const saleDefaults = {
 };
 
 export default function SalesPage() {
-  const { data, createSalesOrder } = useEnterprise();
+  const { data, createSalesOrder, numberValue } = useEnterprise();
   const [form, setForm] = useState(saleDefaults);
   const [message, setMessage] = useState('');
+  const { confirmationDialog, requestConfirmation } = useConfirmationDialog();
   const saleItems = useMemo(() => {
     if (form.itemType === 'raw') {
       return data.rawLots.map((lot) => ({
@@ -36,6 +38,7 @@ export default function SalesPage() {
     }));
   }, [data.rawLots, data.blendBatches, form.itemType]);
   const selectedItem = saleItems.find((item) => item.id === form.itemId);
+  const selectedCustomer = data.customers.find((customer) => customer.id === form.customerId);
   const estimatedRevenue =
     Number(form.kg || 0) * Number(form.pricePerKg || 0) + Number(form.shippingCharge || 0);
 
@@ -46,21 +49,55 @@ export default function SalesPage() {
   function submitSale(event) {
     event.preventDefault();
 
-    try {
-      const order = createSalesOrder(form);
-      setForm({
-        ...saleDefaults,
-        customerId: order.customerId,
-        itemType: form.itemType,
-      });
-      setMessage(`${order.id} created, stock reduced, and shipment packed.`);
-    } catch (error) {
-      setMessage(error.message);
+    const saleKg = numberValue(form.kg);
+    const pricePerKg = numberValue(form.pricePerKg);
+
+    if (!selectedCustomer || !selectedItem) {
+      setMessage('Select customer and item before creating sale.');
+      return;
     }
+
+    if (saleKg <= 0 || pricePerKg <= 0) {
+      setMessage('Sale kg and price must be greater than zero.');
+      return;
+    }
+
+    if (saleKg > selectedItem.stockKg) {
+      setMessage('Sale quantity cannot exceed available stock.');
+      return;
+    }
+
+    requestConfirmation(
+      {
+        title: 'Create sale and pack shipment?',
+        description:
+          'This will reduce stock, increase the customer balance, create the sales order, and add a packed shipment.',
+        details: [
+          { label: 'Customer', value: selectedCustomer.name },
+          { label: 'Item', value: selectedItem.name },
+          { label: 'Quantity', value: formatKg(saleKg) },
+          { label: 'Revenue', value: formatMoney(estimatedRevenue) },
+        ],
+        confirmLabel: 'Create Sale',
+      },
+      () => {
+        try {
+          const order = createSalesOrder(form);
+          setForm({
+            ...saleDefaults,
+            customerId: order.customerId,
+            itemType: form.itemType,
+          });
+          setMessage(`${order.id} created, stock reduced, and shipment packed.`);
+        } catch (error) {
+          setMessage(error.message);
+        }
+      }
+    );
   }
 
   return (
-    <section className="erp-page">
+    <section className="erp-page sales-module">
       <header className="erp-header">
         <div>
           <span className="erp-kicker">Sales</span>
@@ -74,7 +111,7 @@ export default function SalesPage() {
 
       {message && <p className="erp-message">{message}</p>}
 
-      <div className="erp-workspace">
+      <div className="erp-workspace sales-workspace">
         <form className="erp-panel" onSubmit={submitSale}>
           <div className="erp-panel-title">
             <h2>Create Sale</h2>
@@ -189,7 +226,7 @@ export default function SalesPage() {
           </button>
         </form>
 
-        <aside className="erp-panel">
+        <aside className="erp-panel sales-preview-panel">
           <div className="erp-panel-title">
             <h2>Sale Preview</h2>
           </div>
@@ -246,6 +283,7 @@ export default function SalesPage() {
           ))}
         </div>
       </div>
+      {confirmationDialog}
     </section>
   );
 }

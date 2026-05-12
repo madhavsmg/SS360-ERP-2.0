@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useConfirmationDialog } from '../../components/ConfirmationDialog';
 import { useEnterprise } from '../../context/EnterpriseContext';
 
 const updateDefaults = {
@@ -13,6 +14,7 @@ export default function ShippingPage() {
   const { data, updateShipment } = useEnterprise();
   const [form, setForm] = useState(updateDefaults);
   const [message, setMessage] = useState('');
+  const { confirmationDialog, requestConfirmation } = useConfirmationDialog();
 
   function updateForm(field, value) {
     setForm((currentForm) => ({ ...currentForm, [field]: value }));
@@ -21,17 +23,40 @@ export default function ShippingPage() {
   function submitShipment(event) {
     event.preventDefault();
 
-    try {
-      updateShipment(form);
-      setForm(updateDefaults);
-      setMessage('Shipment status updated.');
-    } catch (error) {
-      setMessage(error.message);
+    const shipment = data.shipments.find((item) => item.id === form.shipmentId);
+
+    if (!shipment) {
+      setMessage('Select a shipment to update.');
+      return;
     }
+
+    requestConfirmation(
+      {
+        title: 'Update shipment status?',
+        description:
+          'This will update the fulfillment queue and the linked sales order status.',
+        details: [
+          { label: 'Customer', value: shipment.customerName },
+          { label: 'Order', value: shipment.orderId },
+          { label: 'Current', value: shipment.status },
+          { label: 'Next', value: form.status || shipment.status },
+        ],
+        confirmLabel: 'Update Delivery',
+      },
+      () => {
+        try {
+          updateShipment(form);
+          setForm(updateDefaults);
+          setMessage('Shipment status updated.');
+        } catch (error) {
+          setMessage(error.message);
+        }
+      }
+    );
   }
 
   return (
-    <section className="erp-page">
+    <section className="erp-page shipping-module">
       <header className="erp-header">
         <div>
           <span className="erp-kicker">Fulfillment</span>
@@ -42,8 +67,8 @@ export default function ShippingPage() {
 
       {message && <p className="erp-message">{message}</p>}
 
-      <div className="erp-workspace">
-        <div className="erp-panel">
+      <div className="erp-workspace shipping-workspace">
+        <div className="erp-panel shipping-queue-panel">
           <div className="erp-panel-title">
             <h2>Shipment Queue</h2>
           </div>
@@ -90,7 +115,7 @@ export default function ShippingPage() {
           </div>
         </div>
 
-        <form className="erp-panel" onSubmit={submitShipment}>
+        <form className="erp-panel shipping-update-panel" onSubmit={submitShipment}>
           <div className="erp-panel-title">
             <h2>Update Shipment</h2>
           </div>
@@ -142,6 +167,7 @@ export default function ShippingPage() {
           </button>
         </form>
       </div>
+      {confirmationDialog}
     </section>
   );
 }
