@@ -7,36 +7,36 @@
     BlinkMacSystemFont,
     'Segoe UI',
     sans-serif;
-  color: #17201a;
-  background: #f1f4ef;
+  color: #1f2b1f;
+  background: #f8f0df;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --app-bg: #f1f4ef;
-  --surface: #ffffff;
-  --surface-soft: #f8faf6;
-  --surface-muted: #edf3ed;
-  --surface-glass: rgba(255, 255, 255, 0.9);
-  --line: #dfe7dd;
-  --line-strong: #bfccbf;
-  --text: #17201a;
-  --muted: #637162;
-  --muted-strong: #435042;
-  --brand: #236d45;
-  --brand-dark: #16472f;
-  --brand-soft: #e6f4ea;
-  --gold: #a66a13;
-  --gold-soft: #fff2d8;
-  --coral: #d96848;
-  --coral-soft: #fff0eb;
-  --teal: #0f766e;
-  --teal-soft: #e2f5f1;
-  --danger: #a43b30;
-  --danger-soft: #fae6e2;
-  --shadow: 0 18px 48px rgba(28, 45, 34, 0.09);
-  --shadow-soft: 0 10px 24px rgba(28, 45, 34, 0.07);
+  --app-bg: #f8f0df;
+  --surface: #fffaf0;
+  --surface-soft: #fff5e4;
+  --surface-muted: #e9f1df;
+  --surface-glass: rgba(255, 250, 240, 0.9);
+  --line: #ddceb8;
+  --line-strong: #bba884;
+  --text: #1f2b1f;
+  --muted: #6c705f;
+  --muted-strong: #414c37;
+  --brand: #3d6f35;
+  --brand-dark: #1f4328;
+  --brand-soft: #e5efd8;
+  --gold: #bd7b19;
+  --gold-soft: #fff0cf;
+  --coral: #c96342;
+  --coral-soft: #ffe8dc;
+  --teal: #2c7770;
+  --teal-soft: #dff0ec;
+  --danger: #9a3b32;
+  --danger-soft: #fae4dd;
+  --shadow: 0 18px 48px rgba(52, 43, 28, 0.12);
+  --shadow-soft: 0 10px 24px rgba(52, 43, 28, 0.08);
   --topbar-height: 76px;
 }
 
@@ -54,7 +54,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
-  background: #f1f4ef;
+  background: var(--app-bg);
   color: var(--text);
 }
 
@@ -104,7 +104,7 @@ a {
   inset: 0;
   z-index: -2;
   pointer-events: none;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 248, 235, 0.18);
 }
 
 .app-sidebar {
@@ -116,10 +116,10 @@ a {
   min-height: var(--topbar-height);
   align-items: center;
   gap: 18px;
-  border-bottom: 1px solid rgba(191, 204, 191, 0.74);
-  background: rgba(255, 255, 255, 0.88);
+  border-bottom: 1px solid rgba(187, 168, 132, 0.62);
+  background: rgba(255, 250, 240, 0.9);
   padding: 12px clamp(16px, 2vw, 30px);
-  box-shadow: 0 10px 34px rgba(28, 45, 34, 0.09);
+  box-shadow: 0 10px 34px rgba(52, 43, 28, 0.1);
   backdrop-filter: blur(18px);
 }
 
@@ -135,10 +135,10 @@ a {
   width: 46px;
   height: 46px;
   flex: 0 0 46px;
-  border: 1px solid rgba(35, 109, 69, 0.16);
+  border: 1px solid rgba(61, 111, 53, 0.22);
   border-radius: 999px;
   background: transparent;
-  box-shadow: 0 8px 20px rgba(35, 109, 69, 0.14);
+  box-shadow: 0 8px 20px rgba(61, 111, 53, 0.16);
   object-fit: cover;
 }
 
@@ -201,16 +201,16 @@ a {
 }
 
 .app-nav-link:hover {
-  border-color: rgba(35, 109, 69, 0.18);
-  background: rgba(230, 244, 234, 0.82);
+  border-color: rgba(61, 111, 53, 0.22);
+  background: rgba(229, 239, 216, 0.86);
   color: var(--brand-dark);
 }
 
 .app-nav-link.active {
-  border-color: rgba(35, 109, 69, 0.28);
+  border-color: rgba(61, 111, 53, 0.32);
   background: var(--brand-soft);
   color: var(--brand-dark);
-  box-shadow: inset 0 -2px 0 rgba(35, 109, 69, 0.34);
+  box-shadow: inset 0 -2px 0 rgba(61, 111, 53, 0.38);
 }
 
 .app-sidebar-footer {
@@ -219,10 +219,10 @@ a {
   justify-content: center;
   gap: 8px;
   min-height: 40px;
-  border: 1px solid rgba(191, 204, 191, 0.82);
+  border: 1px solid rgba(187, 168, 132, 0.76);
   border-radius: 999px;
   padding: 8px 11px;
-  background: rgba(248, 250, 246, 0.82);
+  background: rgba(255, 245, 228, 0.86);
   color: var(--muted-strong);
   font-size: 0.76rem;
   font-weight: 780;
