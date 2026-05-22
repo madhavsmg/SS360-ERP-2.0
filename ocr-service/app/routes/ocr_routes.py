@@ -10,7 +10,7 @@ from app.services.invoice_parser_service import parse_invoice_text
 from app.services.invoice_validation_service import validate_invoice
 from app.services.paddle_ocr_service import run_ocr_with_fallback
 from app.services.pdf_service import convert_pdf_to_images, extract_pdf_text_pages, has_usable_pdf_text
-from app.utils.file_utils import cleanup_paths, is_supported_upload, save_upload_file
+from app.utils.file_utils import cleanup_paths, is_supported_upload_metadata, save_upload_file
 
 
 router = APIRouter()
@@ -26,10 +26,10 @@ async def extract_ocr(
     file: UploadFile = File(...),
     document_type: Optional[str] = Form(default=None),
 ):
-    if not is_supported_upload(file.filename):
+    if not is_supported_upload_metadata(file):
         raise HTTPException(status_code=400, detail="Supported files are pdf, png, jpg, and jpeg.")
 
-    saved_path = await save_upload_file(file, settings.temp_dir)
+    saved_path = await save_upload_file(file, settings.temp_dir, settings.max_upload_bytes)
     generated_paths = []
 
     try:
@@ -65,10 +65,10 @@ async def extract_ocr(
 
 @router.post("/ocr/raw")
 async def raw_ocr(file: UploadFile = File(...)):
-    if not is_supported_upload(file.filename):
+    if not is_supported_upload_metadata(file):
         raise HTTPException(status_code=400, detail="Supported files are pdf, png, jpg, and jpeg.")
 
-    saved_path = await save_upload_file(file, settings.temp_dir)
+    saved_path = await save_upload_file(file, settings.temp_dir, settings.max_upload_bytes)
     generated_paths = []
 
     try:

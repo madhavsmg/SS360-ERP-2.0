@@ -219,11 +219,10 @@ export function parseTeaInvoiceText(text, meta = {}) {
     itemResult.items.reduce((total, item) => total + parseNumber(item.taxableValue), 0)
   );
   const explicitTaxable = findTaxableSummaryValue(lines);
-  const taxableValue = explicitTaxable || taxableFromItems || findAmountByLabels(lines, [
-    'taxable value',
-    'taxable total',
-    'basic value',
-  ]);
+  const taxableValue =
+    explicitTaxable ||
+    taxableFromItems ||
+    findAmountByLabels(lines, ['taxable value', 'taxable total', 'basic value']);
   const roundOff = findRoundOff(lines);
   const netTotal = findNetTotal(lines);
   const gstAmounts = findGstAmounts(lines, taxableValue, netTotal, roundOff, miscChargesTotal);
@@ -472,8 +471,12 @@ function parseCompactTeaRow(line, options) {
     return null;
   }
 
-  const rowValues = getNumberTokens(line).filter((token) => !token.isPercent && !isDateToken(token));
-  const amountToken = rowValues.find((token) => isSameNumber(token.value, parseNumber(amountMatch[1])));
+  const rowValues = getNumberTokens(line).filter(
+    (token) => !token.isPercent && !isDateToken(token)
+  );
+  const amountToken = rowValues.find((token) =>
+    isSameNumber(token.value, parseNumber(amountMatch[1]))
+  );
   const afterAmount = rowValues.filter((token) => token.index > (amountToken?.index || 0));
   const descriptionText = [
     ...pendingDescriptions,
@@ -492,7 +495,9 @@ function parseCompactTeaRow(line, options) {
     : afterAmount.find((token) => !isHsnToken(token))?.value || 0;
   const taxableValue = parseNumber(amountMatch[1]);
   const receivedKg = bagSummary.receivedKg || quantityFromLine;
-  const quantity = bagSummary.bagCount || (bagSummary.bagWeightKg ? receivedKg / bagSummary.bagWeightKg : receivedKg);
+  const quantity =
+    bagSummary.bagCount ||
+    (bagSummary.bagWeightKg ? receivedKg / bagSummary.bagWeightKg : receivedKg);
 
   if (!description.teaName && !description.grade) {
     return null;
@@ -516,7 +521,12 @@ function parseCompactTeaRow(line, options) {
 function parseSharonRow(line) {
   const grade = findGrade(line);
 
-  if (!grade || !HSN_PATTERN.test(line) || !/^\s*\d+\s+[A-Z]/i.test(line) || /\bkgs?\b/i.test(line)) {
+  if (
+    !grade ||
+    !HSN_PATTERN.test(line) ||
+    !/^\s*\d+\s+[A-Z]/i.test(line) ||
+    /\bkgs?\b/i.test(line)
+  ) {
     return null;
   }
 
@@ -688,7 +698,9 @@ function createLineItem({
     hsn: '',
     quantity: valueOrBlank(quantity),
     unit: 'Bags',
-    unitWeightKg: valueOrBlank(bagSummary.bagWeightKg || (quantity > 0 ? receivedKg / quantity : 1)),
+    unitWeightKg: valueOrBlank(
+      bagSummary.bagWeightKg || (quantity > 0 ? receivedKg / quantity : 1)
+    ),
     receivedKg: valueOrBlank(receivedKg),
     ratePerKg: valueOrBlank(ratePerKg),
     taxableValue: valueOrBlank(taxableValue),
@@ -772,7 +784,9 @@ function summarizeBagSpecs(specs) {
     bagCount,
     bagWeightKg,
     receivedKg,
-    breakdown: specs.map((spec) => `${formatNumber(spec.count)} x ${formatNumber(spec.weightKg)}`).join(', '),
+    breakdown: specs
+      .map((spec) => `${formatNumber(spec.count)} x ${formatNumber(spec.weightKg)}`)
+      .join(', '),
     components: specs,
   };
 }
@@ -980,7 +994,9 @@ function findNetTotal(lines) {
       continue;
     }
 
-    if (/tax amount|taxable|hsn\/sac/i.test(`${lines[index - 2] || ''} ${lines[index - 1] || ''}`)) {
+    if (
+      /tax amount|taxable|hsn\/sac/i.test(`${lines[index - 2] || ''} ${lines[index - 1] || ''}`)
+    ) {
       continue;
     }
 
@@ -1095,10 +1111,16 @@ function findVendorAddress(lines, vendorName) {
   const startIndex = vendorIndex >= 0 ? vendorIndex + 1 : 0;
   const addressLines = [];
 
-  for (let index = startIndex; index < Math.min(lines.length, buyerIndex, startIndex + 6); index += 1) {
+  for (
+    let index = startIndex;
+    index < Math.min(lines.length, buyerIndex, startIndex + 6);
+    index += 1
+  ) {
     const line = cleanVendorAddressLine(lines[index]);
 
-    if (/(gstin|state name|contact|e-mail|fssai|tmco|temco|invoice|tax invoice|proforma)/i.test(line)) {
+    if (
+      /(gstin|state name|contact|e-mail|fssai|tmco|temco|invoice|tax invoice|proforma)/i.test(line)
+    ) {
       continue;
     }
 
@@ -1133,7 +1155,11 @@ function findVendorPhone(lines) {
 }
 
 function findGstins(text) {
-  return [...new Set(Array.from(String(text || '').matchAll(GSTIN_PATTERN)).map((match) => match[0].toUpperCase()))];
+  return [
+    ...new Set(
+      Array.from(String(text || '').matchAll(GSTIN_PATTERN)).map((match) => match[0].toUpperCase())
+    ),
+  ];
 }
 
 function inferStateFromGstin(gstin) {
@@ -1175,10 +1201,10 @@ function extractInvoiceNumberCandidate(value) {
     }
   }
 
-  const inline = text.match(/(?:invoice|voucher|bill)\s*(?:no|number|#)?\.?\s*[:#-]?\s*([A-Z0-9][A-Z0-9/-]{1,})/i);
-  const inlineValue = inline?.[1]
-    ?.replace(/\b(?:dated|delivery|mode|terms|note)\b.*$/i, '')
-    .trim();
+  const inline = text.match(
+    /(?:invoice|voucher|bill)\s*(?:no|number|#)?\.?\s*[:#-]?\s*([A-Z0-9][A-Z0-9/-]{1,})/i
+  );
+  const inlineValue = inline?.[1]?.replace(/\b(?:dated|delivery|mode|terms|note)\b.*$/i, '').trim();
 
   return inlineValue && /[0-9]/.test(inlineValue) ? inlineValue.toUpperCase() : '';
 }
@@ -1270,7 +1296,9 @@ function cleanVendorAddressLine(line) {
 }
 
 function removeRightBlockText(line) {
-  return String(line || '').split(RIGHT_BLOCK_LABEL_PATTERN)[0].trim();
+  return String(line || '')
+    .split(RIGHT_BLOCK_LABEL_PATTERN)[0]
+    .trim();
 }
 
 function inferSupplierFromFileName(sourceName) {
@@ -1454,7 +1482,9 @@ function isPendingDescriptionLine(line) {
     /[a-z]/i.test(line) &&
     !TABLE_HEADER_PATTERN.test(line) &&
     !STOP_LINE_PATTERN.test(line) &&
-    !/^(tax invoice|proforma invoice|invoice no|dated|mode\/terms|buyer|consignee|gstin|state name)/i.test(line) &&
+    !/^(tax invoice|proforma invoice|invoice no|dated|mode\/terms|buyer|consignee|gstin|state name)/i.test(
+      line
+    ) &&
     getNumberTokens(line).filter((token) => !token.isPercent).length <= 2
   );
 }
@@ -1464,7 +1494,9 @@ function isDetailLine(line) {
 }
 
 function isNewItemStart(line) {
-  return /^\s*\d+\s+(?:tea\b|[A-Z])/i.test(line) && (HSN_PATTERN.test(line) || /\bkgs?\b/i.test(line));
+  return (
+    /^\s*\d+\s+(?:tea\b|[A-Z])/i.test(line) && (HSN_PATTERN.test(line) || /\bkgs?\b/i.test(line))
+  );
 }
 
 function hasBagSpec(line) {
@@ -1531,7 +1563,15 @@ function calculateLineConfidence(fields) {
   return Math.min(score, 100);
 }
 
-function scoreTeaExtraction({ vendorName, vendorGstin, invoiceNumber, invoiceDate, items, netTotal, taxableValue }) {
+function scoreTeaExtraction({
+  vendorName,
+  vendorGstin,
+  invoiceNumber,
+  invoiceDate,
+  items,
+  netTotal,
+  taxableValue,
+}) {
   let score = 10;
 
   if (vendorName) score += 10;

@@ -14,6 +14,7 @@ class Settings(BaseModel):
     port: int = int(os.getenv("OCR_PORT", "8001"))
     temp_dir: Path = Path(os.getenv("OCR_TEMP_DIR", "./temp"))
     output_dir: Path = Path(os.getenv("OCR_OUTPUT_DIR", "./output"))
+    max_upload_bytes: int = int(os.getenv("OCR_MAX_UPLOAD_BYTES", str(25 * 1024 * 1024)))
     ocr_lang: str = os.getenv("OCR_LANG", "en")
     use_gpu: bool = os.getenv("OCR_USE_GPU", "false").strip().lower() in {"1", "true", "yes"}
 

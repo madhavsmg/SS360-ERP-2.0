@@ -3,6 +3,12 @@ import { Camera, CheckCircle2, FileUp, Plus, Save, ScanText, Trash2, X } from 'l
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useConfirmationDialog } from '../../components/ConfirmationDialog';
 import { useEnterprise } from '../../context/EnterpriseContext';
+import {
+  sanitizeGstinInput,
+  sanitizeIndianMobileInput,
+  validateOptionalGstin,
+  validateOptionalIndianMobile,
+} from '../../utils/businessValidation';
 import { formatKg, formatMoney } from '../../utils/formatters';
 import {
   createEmptyInvoiceDraft,
@@ -27,11 +33,24 @@ function progressLabel(progress) {
   return `${progress.label} ${percent}%`;
 }
 
+function sanitizeInvoiceDraftForReview(draft) {
+  return {
+    ...draft,
+    vendor: {
+      ...(draft.vendor || {}),
+      phone: sanitizeIndianMobileInput(draft.vendor?.phone || ''),
+      gstin: sanitizeGstinInput(draft.vendor?.gstin || ''),
+    },
+  };
+}
+
 export default function InvoiceIntake() {
-  const { data, approveInvoiceReceipt, numberValue, saveInvoiceDraft } = useEnterprise();
+  const { data, approveInvoiceReceipt, numberValue, saveInvoiceDraft, today } = useEnterprise();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [draft, setDraft] = useState(createEmptyInvoiceDraft);
+  const [draft, setDraft] = useState(() =>
+    sanitizeInvoiceDraftForReview(createEmptyInvoiceDraft())
+  );
   const [loadedDraftId, setLoadedDraftId] = useState('');
   const [message, setMessage] = useState('');
   const [progress, setProgress] = useState(null);
@@ -69,8 +88,15 @@ export default function InvoiceIntake() {
     };
   }, [draft, numberValue]);
 
+  const vendorPhoneError = validateOptionalIndianMobile(draft.vendor.phone, 'Vendor phone');
+  const vendorGstinError = validateOptionalGstin(draft.vendor.gstin, 'Vendor GSTIN');
+  const invoiceDateError =
+    draft.invoice.date && draft.invoice.date > today ? 'Invoice date cannot be in the future.' : '';
   const canApprove =
     draft.vendor.name.trim() &&
+    !vendorPhoneError &&
+    !vendorGstinError &&
+    !invoiceDateError &&
     draft.items.some((item) => {
       const quantity = numberValue(item.quantity);
       const receivedKg = numberValue(
@@ -87,6 +113,12 @@ export default function InvoiceIntake() {
     draft.invoice.number.trim() ||
     draft.rawText.trim() ||
     draft.items.some((item) => item.teaName?.trim() || item.grade?.trim());
+  const confidenceTone =
+    draft.confidence >= 80
+      ? 'stat-confidence-good'
+      : draft.confidence >= 55
+        ? 'stat-confidence-medium'
+        : 'stat-confidence-low';
 
   useEffect(() => {
     if (videoRef.current && cameraStream) {
@@ -100,7 +132,7 @@ export default function InvoiceIntake() {
     }
 
     if (storedDraft) {
-      setDraft(storedDraft);
+      setDraft(sanitizeInvoiceDraftForReview(storedDraft));
       setLoadedDraftId(draftId);
       setMessage(`${storedDraft.invoice?.number || 'Draft'} opened for review.`);
     } else {
@@ -117,11 +149,21 @@ export default function InvoiceIntake() {
   }, [cameraStream]);
 
   function updateDraft(section, field, value) {
+    let nextValue = value;
+
+    if (section === 'vendor' && field === 'phone') {
+      nextValue = sanitizeIndianMobileInput(value);
+    }
+
+    if (section === 'vendor' && field === 'gstin') {
+      nextValue = sanitizeGstinInput(value);
+    }
+
     setDraft((currentDraft) => ({
       ...currentDraft,
       [section]: {
         ...currentDraft[section],
-        [field]: value,
+        [field]: nextValue,
       },
     }));
   }
@@ -192,7 +234,7 @@ export default function InvoiceIntake() {
   }
 
   function clearDraft() {
-    setDraft(createEmptyInvoiceDraft());
+    setDraft(sanitizeInvoiceDraftForReview(createEmptyInvoiceDraft()));
     setLoadedDraftId('');
     setMessage('');
     navigate('/inventory/intake', { replace: true });
@@ -223,7 +265,7 @@ export default function InvoiceIntake() {
 
   function saveDraft() {
     const savedDraft = saveInvoiceDraft(draft);
-    setDraft(savedDraft);
+    setDraft(sanitizeInvoiceDraftForReview(savedDraft));
     setLoadedDraftId(savedDraft.id);
     setMessage(`${savedDraft.invoice.number || 'Invoice draft'} saved for later review.`);
     navigate(`/inventory/intake?draftId=${savedDraft.id}`, { replace: true });
@@ -240,7 +282,7 @@ export default function InvoiceIntake() {
 
     try {
       const result = await extractInvoiceWithBackend(file, setProgress);
-      setDraft(result.draft);
+      setDraft(sanitizeInvoiceDraftForReview(result.draft));
       setLoadedDraftId('');
       navigate('/inventory/intake', { replace: true });
       setMessage(
@@ -250,7 +292,7 @@ export default function InvoiceIntake() {
       try {
         setProgress({ label: 'Using browser OCR fallback', progress: 0.05 });
         const nextDraft = await extractInvoiceFromFile(file, setProgress);
-        setDraft(nextDraft);
+        setDraft(sanitizeInvoiceDraftForReview(nextDraft));
         setLoadedDraftId('');
         navigate('/inventory/intake', { replace: true });
         setMessage(`${fallbackMessage(error)} Browser OCR fallback extracted ${file.name}.`);
@@ -314,7 +356,7 @@ export default function InvoiceIntake() {
       const dataUrl = canvas.toDataURL('image/png');
       const cameraFile = dataUrlToInvoiceFile(dataUrl, `camera-invoice-${Date.now()}.png`);
       const result = await extractInvoiceWithBackend(cameraFile, setProgress);
-      setDraft(result.draft);
+      setDraft(sanitizeInvoiceDraftForReview(result.draft));
       setLoadedDraftId('');
       navigate('/inventory/intake', { replace: true });
       setMessage(
@@ -324,7 +366,7 @@ export default function InvoiceIntake() {
       try {
         const dataUrl = canvas.toDataURL('image/png');
         const nextDraft = await extractInvoiceFromImageDataUrl(dataUrl, setProgress);
-        setDraft(nextDraft);
+        setDraft(sanitizeInvoiceDraftForReview(nextDraft));
         setLoadedDraftId('');
         navigate('/inventory/intake', { replace: true });
         setMessage(`${fallbackMessage(error)} Browser OCR fallback extracted the camera capture.`);
@@ -340,18 +382,28 @@ export default function InvoiceIntake() {
   async function approveDraft() {
     setIsProcessing(true);
     setMessage('');
+    let backendApprovalCompleted = false;
 
     try {
+      if (vendorPhoneError || vendorGstinError || invoiceDateError) {
+        throw new Error(vendorPhoneError || vendorGstinError || invoiceDateError);
+      }
+
+      if (!canApprove) {
+        throw new Error('Review vendor and stock line details before approval.');
+      }
+
       if (draft.backendInvoiceId) {
         setProgress({ label: 'Posting approved invoice to backend', progress: 0.65 });
         await approveBackendInvoice(draft.backendInvoiceId, draft);
+        backendApprovalCompleted = true;
       }
 
       const result = approveInvoiceReceipt(draft);
       setMessage(
         `${draft.invoice.number || 'Invoice'} approved. ${reviewSummary.stockLines} raw stock lots posted.`
       );
-      setDraft(createEmptyInvoiceDraft());
+      setDraft(sanitizeInvoiceDraftForReview(createEmptyInvoiceDraft()));
       setLoadedDraftId('');
       navigate('/inventory/invoices', {
         state: {
@@ -359,7 +411,11 @@ export default function InvoiceIntake() {
         },
       });
     } catch (error) {
-      setMessage(error.message);
+      setMessage(
+        backendApprovalCompleted
+          ? `${error.message} Backend approval already completed; keep this draft open and reconcile before approving again.`
+          : error.message
+      );
     } finally {
       setIsProcessing(false);
       setProgress(null);
@@ -367,6 +423,11 @@ export default function InvoiceIntake() {
   }
 
   function requestApproveDraft() {
+    if (vendorPhoneError || vendorGstinError || invoiceDateError) {
+      setMessage(vendorPhoneError || vendorGstinError || invoiceDateError);
+      return;
+    }
+
     if (!canApprove) {
       setMessage('Review vendor and stock line details before approval.');
       return;
@@ -422,11 +483,7 @@ export default function InvoiceIntake() {
               {cameraStream ? <X size={17} /> : <Camera size={17} />}
               {cameraStream ? 'Close Camera' : 'Open Camera'}
             </button>
-            <button
-              className="erp-button secondary"
-              type="button"
-              onClick={requestClearDraft}
-            >
+            <button className="erp-button secondary" type="button" onClick={requestClearDraft}>
               <ScanText size={17} />
               Clear Draft
             </button>
@@ -455,17 +512,17 @@ export default function InvoiceIntake() {
           )}
 
           <div className="erp-summary-grid invoice-summary">
-            <div className="erp-stat">
+            <div className={`erp-stat erp-kpi-stat ${confidenceTone}`}>
               <span>Confidence</span>
               <strong>{draft.confidence}%</strong>
               <small>{draft.sourceName || 'No source selected'}</small>
             </div>
-            <div className="erp-stat">
+            <div className="erp-stat erp-kpi-stat stat-stock-lines">
               <span>Stock Lines</span>
               <strong>{reviewSummary.stockLines}</strong>
               <small>{formatKg(reviewSummary.receivedKg)}</small>
             </div>
-            <div className="erp-stat">
+            <div className="erp-stat erp-kpi-stat stat-payable-total">
               <span>Payable Total</span>
               <strong>{formatMoney(reviewSummary.netTotal)}</strong>
               <small>
@@ -504,7 +561,9 @@ export default function InvoiceIntake() {
             <div className="erp-trace-list">
               <div>
                 <strong>Correcting {correctionInvoice.invoiceNumber}</strong>
-                <span>{correctionInvoice.revertReason || 'Correction draft from reverted approval.'}</span>
+                <span>
+                  {correctionInvoice.revertReason || 'Correction draft from reverted approval.'}
+                </span>
               </div>
             </div>
           )}
@@ -545,6 +604,9 @@ export default function InvoiceIntake() {
           <label>
             <span>Vendor</span>
             <input
+              autoComplete="organization"
+              maxLength="100"
+              required
               value={draft.vendor.name}
               onChange={(event) => updateDraft('vendor', 'name', event.target.value)}
             />
@@ -552,6 +614,10 @@ export default function InvoiceIntake() {
           <label>
             <span>GSTIN</span>
             <input
+              autoCapitalize="characters"
+              maxLength="15"
+              pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]"
+              placeholder="15-character GSTIN"
               value={draft.vendor.gstin}
               onChange={(event) => updateDraft('vendor', 'gstin', event.target.value)}
             />
@@ -559,6 +625,12 @@ export default function InvoiceIntake() {
           <label>
             <span>Phone</span>
             <input
+              autoComplete="tel"
+              inputMode="numeric"
+              maxLength="10"
+              pattern="[6-9][0-9]{9}"
+              placeholder="10-digit mobile"
+              type="tel"
               value={draft.vendor.phone}
               onChange={(event) => updateDraft('vendor', 'phone', event.target.value)}
             />
@@ -566,6 +638,7 @@ export default function InvoiceIntake() {
           <label>
             <span>Invoice No</span>
             <input
+              maxLength="40"
               value={draft.invoice.number}
               onChange={(event) => updateDraft('invoice', 'number', event.target.value)}
             />
@@ -574,6 +647,7 @@ export default function InvoiceIntake() {
             <span>Invoice Date</span>
             <input
               type="date"
+              max={today}
               value={draft.invoice.date}
               onChange={(event) => updateDraft('invoice', 'date', event.target.value)}
             />
@@ -581,6 +655,7 @@ export default function InvoiceIntake() {
           <label className="erp-wide-field">
             <span>Vendor Address</span>
             <input
+              maxLength="240"
               value={draft.vendor.address}
               onChange={(event) => updateDraft('vendor', 'address', event.target.value)}
             />
@@ -687,6 +762,7 @@ export default function InvoiceIntake() {
                   <label>
                     <span>Description</span>
                     <input
+                      maxLength="80"
                       value={charge.label}
                       onChange={(event) => updateCharge(index, 'label', event.target.value)}
                     />
@@ -750,16 +826,19 @@ export default function InvoiceIntake() {
             <div className="erp-row invoice-row" key={item.id}>
               <span>
                 <input
+                  maxLength="80"
                   placeholder="Tea name"
                   value={item.teaName}
                   onChange={(event) => updateItem(index, 'teaName', event.target.value)}
                 />
                 <input
+                  maxLength="24"
                   placeholder="Grade"
                   value={item.grade}
                   onChange={(event) => updateItem(index, 'grade', event.target.value)}
                 />
                 <input
+                  maxLength="80"
                   placeholder="Bag breakup, e.g. 4 x 32, 3 x 21.5"
                   value={item.bagBreakdown || ''}
                   onChange={(event) => updateItem(index, 'bagBreakdown', event.target.value)}

@@ -1,8 +1,11 @@
 import { Router } from 'express';
 
-import { approveInvoice, extractInvoice, uploadInvoice } from '../controllers/invoice.controller.js';
+import {
+  approveInvoice,
+  extractInvoice,
+  uploadInvoice,
+} from '../controllers/invoice.controller.js';
 import { upload } from '../middleware/upload.middleware.js';
-
 
 export const invoiceRouter = Router();
 

@@ -3,6 +3,7 @@ import { Camera, Plus, QrCode, Trash2, X } from 'lucide-react';
 import { useConfirmationDialog } from '../../components/ConfirmationDialog';
 import { useEnterprise } from '../../context/EnterpriseContext';
 import { formatKg, formatMoney, formatPercent } from '../../utils/formatters';
+import { getBagOptionLabel, readQrValue } from '../../utils/qrPayloads';
 
 const blendDefaults = {
   productName: '',
@@ -21,26 +22,8 @@ const manualDefaults = {
   bagCount: '1',
 };
 
-function readQrValue(value) {
-  const trimmedValue = value.trim();
-
-  if (!trimmedValue) {
-    return {};
-  }
-
-  try {
-    return JSON.parse(trimmedValue);
-  } catch {
-    return { id: trimmedValue };
-  }
-}
-
 function lineKey(lotId, bagSizeKg) {
   return `${lotId}:${bagSizeKg}`;
-}
-
-function getBagOptionLabel(option) {
-  return `${option.remainingBagCount} bag(s) x ${option.bagSizeKg} kg`;
 }
 
 function mergeBlendLines(components, lot, bagSizeKg, bagCount, bagIds = []) {
@@ -120,7 +103,8 @@ export default function ProductionPage() {
   const expectedRevenue = hasBlendBags ? preview.expectedRevenue : 0;
   const expectedProfit = hasBlendBags ? preview.expectedProfit : 0;
   const marginPercent = hasBlendBags ? preview.marginPercent : 0;
-  const profitPerKg = hasBlendBags && targetPricePerKg > 0 ? targetPricePerKg - preview.costPerKg : 0;
+  const profitPerKg =
+    hasBlendBags && targetPricePerKg > 0 ? targetPricePerKg - preview.costPerKg : 0;
 
   function updateForm(field, value) {
     setForm((currentForm) => ({ ...currentForm, [field]: value }));
@@ -405,35 +389,45 @@ export default function ProductionPage() {
           <span className="erp-kicker">Production</span>
           <h1>QR Blending & Batch Costing</h1>
           <p>
-            Scan godown bags into a blend draft, estimate cost before approval, and post the
-            blended batch into inventory only when the mix works.
+            Scan godown bags into a blend draft, estimate cost before approval, and post the blended
+            batch into inventory only when the mix works.
           </p>
         </div>
       </header>
 
       <div className="erp-summary-grid">
-        <div className="erp-stat">
+        <div className="erp-stat erp-kpi-stat stat-work-in-progress">
           <span>Draft Bags</span>
           <strong>{draftBagCount}</strong>
           <small>selected for this blend</small>
         </div>
-        <div className="erp-stat">
+        <div className="erp-stat erp-kpi-stat stat-stock-weight">
           <span>Batch Weight</span>
           <strong>{formatKg(preview.batchKg)}</strong>
           <small>raw tea in calculator</small>
         </div>
-        <div className="erp-stat">
+        <div className="erp-stat erp-kpi-stat stat-cost">
           <span>Cost/Kg</span>
           <strong>{formatMoney(preview.costPerKg)}</strong>
           <small>with overheads</small>
         </div>
-        <div className="erp-stat">
+        <div
+          className={`erp-stat erp-kpi-stat ${
+            !hasBlendBags
+              ? 'stat-margin-waiting'
+              : expectedProfit < 0
+                ? 'stat-margin-negative'
+                : 'stat-margin-positive'
+          }`}
+        >
           <span>Target Margin</span>
           <strong className={hasBlendBags && expectedProfit < 0 ? 'erp-loss' : 'erp-profit'}>
             {formatPercent(marginPercent)}
           </strong>
           <small>
-            {hasBlendBags ? `${formatMoney(expectedProfit)} expected profit` : 'Add bags to calculate'}
+            {hasBlendBags
+              ? `${formatMoney(expectedProfit)} expected profit`
+              : 'Add bags to calculate'}
           </small>
         </div>
       </div>
@@ -458,18 +452,26 @@ export default function ProductionPage() {
             <label>
               <span>Blend Product</span>
               <input
+                maxLength="80"
+                required
                 value={form.productName}
                 onChange={(event) => updateForm('productName', event.target.value)}
               />
             </label>
             <label>
               <span>SKU</span>
-              <input value={form.sku} onChange={(event) => updateForm('sku', event.target.value)} />
+              <input
+                autoCapitalize="characters"
+                maxLength="32"
+                value={form.sku}
+                onChange={(event) => updateForm('sku', event.target.value)}
+              />
             </label>
             <label>
               <span>Target blend price/kg</span>
               <input
                 min="0"
+                required
                 step="0.01"
                 type="number"
                 value={form.sellingPricePerKg}
@@ -665,6 +667,7 @@ export default function ProductionPage() {
             <label>
               <span>Raw inventory lot</span>
               <select
+                required
                 value={manualForm.lotId}
                 onChange={(event) => selectManualLot(event.target.value)}
               >
@@ -680,6 +683,7 @@ export default function ProductionPage() {
               <label>
                 <span>Bag size</span>
                 <select
+                  required
                   value={manualForm.bagSizeKg}
                   onChange={(event) =>
                     setManualForm((currentForm) => ({
@@ -701,6 +705,8 @@ export default function ProductionPage() {
                 <span>Bag count</span>
                 <input
                   min="1"
+                  max={manualAvailable || undefined}
+                  required
                   step="1"
                   type="number"
                   value={manualForm.bagCount}

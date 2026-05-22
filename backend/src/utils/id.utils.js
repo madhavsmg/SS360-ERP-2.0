@@ -8,7 +8,6 @@ export function slugify(value, fallback = 'ITEM') {
   return slug || fallback;
 }
 
-
 export function makeId(prefix, value) {
   const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
   const randomPart = Math.random().toString(36).slice(2, 6).toUpperCase();

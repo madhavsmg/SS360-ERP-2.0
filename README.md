@@ -4,7 +4,7 @@
   <img src="public/circle%20logo%20ss%20tea.png" alt="SS360 Tea Enterprise logo" width="112" />
 </p>
 
-<h3 align="center">Full-stack tea enterprise ERP with local OCR, PostgreSQL persistence, QR inventory, production costing, sales, POS, and shipping.</h3>
+<h3 align="center">Full-stack tea enterprise ERP with local OCR, PostgreSQL persistence, QR inventory, production costing, sales, and shipping.</h3>
 
 <p align="center">
   <img alt="React" src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111827" />
@@ -18,7 +18,7 @@
   <img alt="ESLint" src="https://img.shields.io/badge/ESLint-Prettier-4B32C3?logo=eslint&logoColor=white" />
 </p>
 
-SS360 ERP 2.0 is a local-first, full-stack ERP workspace built for Siva Sai Tea Enterprises. It connects the supplier ledger, invoice OCR, raw lot inventory, QR labels, blend production, sales/POS, customer balances, and shipping into one workflow.
+SS360 ERP 2.0 is a local-first, full-stack ERP workspace built for Siva Sai Tea Enterprises. It connects the supplier ledger, invoice OCR, raw lot inventory, QR labels, blend production, sales, customer balances, and shipping into one workflow.
 
 The goal is simple: stop retyping tea invoices, stock ledgers, bag counts, GST numbers, and shipping updates by hand. The app reads invoices, turns reviewed data into inventory lots, calculates landed cost, prints QR labels, decrements stock through production and sales, and keeps operational dashboards current.
 
@@ -57,14 +57,13 @@ The goal is simple: stop retyping tea invoices, stock ledgers, bag counts, GST n
 - Calculate raw material cost, packing cost, labor, overhead, total cost, cost/kg, revenue, expected profit, and margin.
 - Preserve traceability from blended batch back to source raw lots.
 
-### Sales, POS, Customers, and Shipping
+### Sales, Customers, and Shipping
 
 - Sell blended batches or direct raw tea stock.
 - Automatically reduce stock when a sale is created.
 - Calculate revenue, COGS, profit, customer outstanding, and shipment records.
 - Maintain customer profiles, credit limits, delivery preferences, payments, and order history.
 - Move shipments through Packed, Dispatched, and Delivered states with transport and vehicle/LR details.
-- POS reuses the Sales workflow so counter sales and order entry stay consistent.
 
 ### Dashboard
 
@@ -88,48 +87,49 @@ The frontend is still resilient in offline/demo mode with React Context and `loc
 
 ## Tech Stack
 
-| Layer | Technology | Why it is used |
-| --- | --- | --- |
-| Frontend | React 19, Vite, React Router | Fast module UI, dashboard routing, and modern development workflow |
-| UI | CSS, lucide-react | Enterprise-style screens, icons, forms, tables, alerts, and QR label surfaces |
-| Client state | React Context, localStorage | Local-first ERP state and browser fallback continuity |
-| Invoice parsing | pdfjs-dist, pdf-parse, tesseract.js | Browser and Node PDF text extraction plus OCR fallback |
-| QR labels | qrcode | Printable QR labels for raw lots and blended batches |
-| Backend | Node.js, Express, CORS, dotenv | Local API layer for upload, extraction, approval, and service coordination |
-| Database | PostgreSQL, Prisma | Persistent invoice, supplier, and raw lot records |
-| Uploads | multer | Local invoice file storage under `backend/uploads/invoices` |
-| OCR service | Python, FastAPI, Uvicorn | Free local OCR API without paid cloud OCR calls |
-| OCR engine | PaddleOCR, OpenCV, Pillow, NumPy, PyMuPDF | Image preprocessing, PDF page conversion, OCR, text layout, and parsing |
-| Tooling | ESLint, Prettier, nodemon | Code quality, formatting, and development reloads |
+| Layer           | Technology                                | Why it is used                                                                |
+| --------------- | ----------------------------------------- | ----------------------------------------------------------------------------- |
+| Frontend        | React 19, Vite, React Router              | Fast module UI, dashboard routing, and modern development workflow            |
+| UI              | CSS, lucide-react                         | Enterprise-style screens, icons, forms, tables, alerts, and QR label surfaces |
+| Client state    | React Context, localStorage               | Local-first ERP state and browser fallback continuity                         |
+| Invoice parsing | pdfjs-dist, pdf-parse, tesseract.js       | Browser and Node PDF text extraction plus OCR fallback                        |
+| QR labels       | qrcode                                    | Printable QR labels for raw lots and blended batches                          |
+| Backend         | Node.js, Express, CORS, dotenv            | Local API layer for upload, extraction, approval, and service coordination    |
+| Database        | PostgreSQL, Prisma                        | Persistent invoice, supplier, and raw lot records                             |
+| Uploads         | multer                                    | Local invoice file storage under `backend/uploads/invoices`                   |
+| OCR service     | Python, FastAPI, Uvicorn                  | Free local OCR API without paid cloud OCR calls                               |
+| OCR engine      | PaddleOCR, OpenCV, Pillow, NumPy, PyMuPDF | Image preprocessing, PDF page conversion, OCR, text layout, and parsing       |
+| Tooling         | ESLint, Prettier, nodemon                 | Code quality, formatting, and development reloads                             |
 
 ## How The Automation Saves Time
 
-| Manual work before | SS360 automated flow |
-| --- | --- |
-| Read every invoice line by hand | OCR extracts PDF/image/camera text locally |
-| Re-enter supplier and GST details | Parser fills vendor, GSTIN, phone, address, invoice number, and date |
-| Calculate bags and kg manually | Bag specs like `17 x 40` become bags, kg per bag, and received kg |
-| Split GST and charges by spreadsheet | Parser captures GST, cart/coolie, transport, labour, and misc charges |
-| Calculate landed stock cost manually | Approval allocates acquisition charges into landed cost/kg |
-| Create stock lots manually | Approval creates raw inventory lots automatically |
-| Print labels from another tool | Inventory generates printable QR labels in the app |
-| Update stock after blending and sales | Production and Sales decrement stock automatically |
-| Track delivery separately | Sales creates shipments and Shipping updates order state |
+| Manual work before                    | SS360 automated flow                                                  |
+| ------------------------------------- | --------------------------------------------------------------------- |
+| Read every invoice line by hand       | OCR extracts PDF/image/camera text locally                            |
+| Re-enter supplier and GST details     | Parser fills vendor, GSTIN, phone, address, invoice number, and date  |
+| Calculate bags and kg manually        | Bag specs like `17 x 40` become bags, kg per bag, and received kg     |
+| Split GST and charges by spreadsheet  | Parser captures GST, cart/coolie, transport, labour, and misc charges |
+| Calculate landed stock cost manually  | Approval allocates acquisition charges into landed cost/kg            |
+| Create stock lots manually            | Approval creates raw inventory lots automatically                     |
+| Print labels from another tool        | Inventory generates printable QR labels in the app                    |
+| Update stock after blending and sales | Production and Sales decrement stock automatically                    |
+| Track delivery separately             | Sales creates shipments and Shipping updates order state              |
 
 ## Project Structure
 
 ```text
 .
 ├── backend/                 Express API, Prisma schema, migrations, uploads
-├── docs/                    Implementation notes and invoice extraction reference
+├── docs/                    Codebase navigation, diagrams, and invoice extraction notes
 ├── ocr-service/             FastAPI OCR service with PaddleOCR and OpenCV
 ├── public/                  Logos and static Vite assets
 ├── sample-data/invoices/    Real invoice samples for parser testing
 ├── scripts/                 Local extraction and validation scripts
 ├── src/
-│   ├── components/          App shell and sidebar navigation
+│   ├── components/          Shared UI pieces such as dialogs and navigation
 │   ├── context/             ERP state, metrics, localStorage, business rules
-│   ├── modules/             Dashboard, Suppliers, Inventory, Production, Sales, Shipping, POS
+│   ├── modules/             Dashboard, Suppliers, Inventory, Production, Sales, Shipping
+│   ├── styles/              Shared ERP layout, theme, forms, tables, and cards
 │   └── utils/               Formatters, invoice extraction, parser, backend client
 ├── package.json             Frontend scripts and dependencies
 └── vite.config.js
@@ -139,7 +139,7 @@ The frontend is still resilient in offline/demo mode with React Context and `loc
 
 ### Frontend
 
-- Routes: `/`, `/suppliers`, `/customers`, `/inventory`, `/production`, `/sales`, `/shipping`, `/pos`.
+- Routes: `/`, `/suppliers`, `/customers`, `/inventory`, `/production`, `/sales`, `/shipping`.
 - Uses `EnterpriseProvider` to hold the local ERP state and calculate dashboard metrics.
 - Uses `src/utils/invoiceBackendClient.js` for backend invoice upload, extraction, and approval.
 - Uses `src/utils/invoiceExtraction.js` and `src/utils/teaInvoiceParser.js` for browser fallback extraction.
@@ -183,11 +183,11 @@ The frontend is still resilient in offline/demo mode with React Context and `loc
 
 ## Database Model
 
-| Model | Purpose |
-| --- | --- |
-| `Invoice` | Upload metadata, raw text, extraction JSON, review JSON, approval JSON, OCR status, confidence, approval timestamp |
-| `Supplier` | Vendor profile, GSTIN, address, phone, outstanding balance |
-| `RawInventoryLot` | Received tea lot with bags, kg, remaining kg, landed cost, quality JSON, and movement JSON |
+| Model             | Purpose                                                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `Invoice`         | Upload metadata, raw text, extraction JSON, review JSON, approval JSON, OCR status, confidence, approval timestamp |
+| `Supplier`        | Vendor profile, GSTIN, address, phone, outstanding balance                                                         |
+| `RawInventoryLot` | Received tea lot with bags, kg, remaining kg, landed cost, quality JSON, and movement JSON                         |
 
 ## Local Setup
 

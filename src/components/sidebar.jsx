@@ -2,7 +2,6 @@ import {
   Boxes,
   Factory,
   LayoutDashboard,
-  PackageCheck,
   ReceiptText,
   ShoppingCart,
   Truck,
@@ -19,7 +18,6 @@ const navigationItems = [
   { to: '/production', label: 'Production', icon: Factory },
   { to: '/sales', label: 'Sales', icon: ShoppingCart },
   { to: '/shipping', label: 'Shipping', icon: Truck },
-  { to: '/pos', label: 'POS', icon: PackageCheck },
 ];
 
 export default function Sidebar() {

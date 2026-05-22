@@ -3,58 +3,7 @@ import { Printer, QrCode as QrCodeIcon, Search } from 'lucide-react';
 import QRCode from 'qrcode';
 import { useEnterprise } from '../../context/EnterpriseContext';
 import { formatKg, formatMoney } from '../../utils/formatters';
-
-function getQrPayload(type, item, options = {}) {
-  if (type === 'raw') {
-    return JSON.stringify({
-      app: 'SS-360',
-      module: 'inventory',
-      type: 'raw-tea-stock',
-      lotId: item.id,
-      bagSizeKg: options.bagSizeKg,
-      bagId: options.bagId || '',
-      variety: item.variety,
-      grade: item.grade,
-      supplier: item.supplierName,
-      remainingKg: item.remainingKg,
-      costPerKg: item.costPerKg,
-    });
-  }
-
-  return (
-    item.qrPayload ||
-    JSON.stringify({
-      app: 'SS-360',
-      module: 'inventory',
-      type: 'finished-blend-batch',
-      batchId: item.id,
-      productName: item.productName,
-      sku: item.sku,
-      remainingKg: item.remainingKg,
-      costPerKg: item.costPerKg,
-      sellingPricePerKg: item.sellingPricePerKg,
-    })
-  );
-}
-
-function readQrValue(value) {
-  const trimmedValue = value.trim();
-
-  if (!trimmedValue) {
-    return {};
-  }
-
-  try {
-    const parsed = JSON.parse(trimmedValue);
-    return parsed;
-  } catch {
-    return { id: trimmedValue };
-  }
-}
-
-function getBagOptionLabel(option) {
-  return `${option.remainingBagCount} bag(s) x ${option.bagSizeKg} kg`;
-}
+import { buildStockQrPayload, getBagOptionLabel, readQrValue } from '../../utils/qrPayloads';
 
 export default function InventoryStock() {
   const { data, metrics, getRawLotBagOptions } = useEnterprise();
@@ -94,10 +43,7 @@ export default function InventoryStock() {
   }, [activeRawLots, normalizedSearch]);
   const blendBatches = useMemo(() => {
     return data.blendBatches.filter((batch) =>
-      [batch.id, batch.productName, batch.sku]
-        .join(' ')
-        .toLowerCase()
-        .includes(normalizedSearch)
+      [batch.id, batch.productName, batch.sku].join(' ').toLowerCase().includes(normalizedSearch)
     );
   }, [data.blendBatches, normalizedSearch]);
   const selectedQrKey =
@@ -108,42 +54,31 @@ export default function InventoryStock() {
   useEffect(() => {
     let mounted = true;
 
-    async function buildQrCodes() {
-      const nextImages = {};
-      const targets = [
-        ...activeRawLots.flatMap((lot) =>
-          getRawLotBagOptions(lot).map((option) => ({
-            key: `raw:${lot.id}:${option.bagSizeKg}`,
-            payload: getQrPayload('raw', lot, { bagSizeKg: option.bagSizeKg }),
-          }))
-        ),
-        ...data.blendBatches.map((batch) => ({
-          key: `blend:${batch.id}`,
-          payload: getQrPayload('blend', batch),
-        })),
-      ];
+    async function buildSelectedQrCode() {
+      if (!selectedItem || !selectedQrKey || qrImages[selectedQrKey]) {
+        return;
+      }
 
-      await Promise.all(
-        targets.map(async (target) => {
-          nextImages[target.key] = await QRCode.toDataURL(target.payload, {
-            errorCorrectionLevel: 'M',
-            margin: 2,
-            width: 220,
-          });
-        })
-      );
+      const payload = buildStockQrPayload(selectedLabel.type, selectedItem, {
+        bagSizeKg: selectedBagSize,
+      });
+      const image = await QRCode.toDataURL(payload, {
+        errorCorrectionLevel: 'M',
+        margin: 2,
+        width: 220,
+      });
 
       if (mounted) {
-        setQrImages(nextImages);
+        setQrImages((currentImages) => ({ ...currentImages, [selectedQrKey]: image }));
       }
     }
 
-    buildQrCodes();
+    buildSelectedQrCode();
 
     return () => {
       mounted = false;
     };
-  }, [activeRawLots, data.blendBatches, getRawLotBagOptions]);
+  }, [qrImages, selectedBagSize, selectedItem, selectedLabel.type, selectedQrKey]);
 
   useEffect(() => {
     if (selectedItem) {
@@ -210,22 +145,26 @@ export default function InventoryStock() {
   return (
     <>
       <div className="erp-summary-grid">
-        <div className="erp-stat">
+        <div className="erp-stat erp-kpi-stat stat-raw-stock">
           <span>Raw Stock</span>
           <strong>{formatKg(metrics.rawKg)}</strong>
           <small>{formatMoney(metrics.rawValue)} active value</small>
         </div>
-        <div className="erp-stat">
+        <div className="erp-stat erp-kpi-stat stat-blended-stock">
           <span>Blended Stock</span>
           <strong>{formatKg(metrics.finishedKg)}</strong>
           <small>{formatMoney(metrics.finishedValue)} batch value</small>
         </div>
-        <div className="erp-stat">
+        <div
+          className={`erp-stat erp-kpi-stat ${
+            metrics.lowRawLots > 0 ? 'stat-low-stock' : 'stat-approved'
+          }`}
+        >
           <span>Low Stock</span>
           <strong>{metrics.lowRawLots}</strong>
           <small>raw lots below reorder level</small>
         </div>
-        <div className="erp-stat">
+        <div className="erp-stat erp-kpi-stat stat-inventory-value">
           <span>Total Inventory</span>
           <strong>{formatMoney(metrics.rawValue + metrics.finishedValue)}</strong>
           <small>stock value on hand</small>
@@ -378,10 +317,7 @@ export default function InventoryStock() {
               )}
               <div className="erp-qr-box">
                 {qrImages[selectedQrKey] ? (
-                  <img
-                    src={qrImages[selectedQrKey]}
-                    alt={`QR for ${selectedItem.id}`}
-                  />
+                  <img src={qrImages[selectedQrKey]} alt={`QR for ${selectedItem.id}`} />
                 ) : (
                   <span>Generating QR</span>
                 )}

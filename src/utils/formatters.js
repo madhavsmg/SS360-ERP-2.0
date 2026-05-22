@@ -1,19 +1,21 @@
+import { toFiniteNumber } from './salesCalculations';
+
 export function formatMoney(value) {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
-    maximumFractionDigits: 0,
-  }).format(value || 0);
+    maximumFractionDigits: 2,
+  }).format(toFiniteNumber(value));
 }
 
 export function formatKg(value) {
-  return `${Number(value || 0).toLocaleString('en-IN', {
+  return `${toFiniteNumber(value).toLocaleString('en-IN', {
     maximumFractionDigits: 2,
   })} kg`;
 }
 
 export function formatPercent(value) {
-  return `${Number(value || 0).toLocaleString('en-IN', {
+  return `${toFiniteNumber(value).toLocaleString('en-IN', {
     maximumFractionDigits: 1,
   })}%`;
 }

@@ -1,0 +1,16 @@
+node_modules/
+backend/node_modules/
+dist/
+build/
+logs/
+.cache/
+.vite/
+.vite-cache/
+backend/uploads/
+ocr-service/.venv/
+ocr-service/venv/
+ocr-service/temp/
+ocr-service/output/
+sample-data/invoices/
+package-lock.json
+backend/package-lock.json

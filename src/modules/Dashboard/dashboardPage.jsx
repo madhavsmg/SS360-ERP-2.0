@@ -14,8 +14,8 @@ export default function DashboardPage() {
         <div>
           <h1>Siva Sai Tea ERP</h1>
           <p>
-            Supplier ledger, invoice intake, raw stock, blending, sales, shipping, and profit stay connected
-            from one dashboard.
+            Supplier ledger, invoice intake, raw stock, blending, sales, shipping, and profit stay
+            connected from one dashboard.
           </p>
         </div>
       </header>

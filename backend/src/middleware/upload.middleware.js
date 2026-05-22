@@ -4,12 +4,10 @@ import path from 'path';
 import multer from 'multer';
 
 import { env } from '../config/env.js';
-
+import { isAllowedUploadMetadata } from '../utils/fileSignature.utils.js';
 
 const uploadRoot = path.resolve(env.uploadDir);
 fs.mkdirSync(uploadRoot, { recursive: true });
-
-const allowedExtensions = new Set(['.pdf', '.png', '.jpg', '.jpeg']);
 
 const storage = multer.diskStorage({
   destination: (request, file, callback) => {
@@ -27,9 +25,10 @@ const storage = multer.diskStorage({
 });
 
 function fileFilter(request, file, callback) {
-  const extension = path.extname(file.originalname).toLowerCase();
-  if (!allowedExtensions.has(extension)) {
-    callback(new Error('Supported files are pdf, png, jpg, and jpeg.'));
+  if (!isAllowedUploadMetadata(file)) {
+    const error = new Error('Supported files are PDF, PNG, JPG, and JPEG invoices.');
+    error.statusCode = 400;
+    callback(error);
     return;
   }
 

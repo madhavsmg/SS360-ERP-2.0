@@ -5,7 +5,6 @@ import FormData from 'form-data';
 
 import { env } from '../config/env.js';
 
-
 export async function extractInvoiceFile({ filePath, fileName, mimeType, documentType }) {
   const form = new FormData();
   form.append('file', fs.createReadStream(filePath), {

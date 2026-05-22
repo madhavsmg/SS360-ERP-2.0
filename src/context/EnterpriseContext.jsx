@@ -1,4 +1,14 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import {
+  formatPaymentTerms,
+  normalizeIndianMobile,
+  sanitizeGstinInput,
+  validateOptionalGstin,
+  validateOptionalIndianMobile,
+  validatePaymentTermDays,
+} from '../utils/businessValidation';
+import { numberValue, presentNumber, roundMoney } from '../utils/erpNumbers';
+import { calculateSaleRevenue } from '../utils/salesCalculations';
 
 const STORAGE_KEY = 'ss360.enterpriseData.v1';
 
@@ -8,13 +18,901 @@ const LEGACY_STOCK_INTAKE_KEYS = {
   invoiceDocumentIds: 'purchase' + 'OrderIds',
 };
 
+const customerStateByCity = new Map(
+  [
+    ['Hyderabad', 'Telangana'],
+    ['Secunderabad', 'Telangana'],
+    ['Warangal', 'Telangana'],
+    ['Karimnagar', 'Telangana'],
+    ['Khammam', 'Telangana'],
+    ['Nizamabad', 'Telangana'],
+    ['Nalgonda', 'Telangana'],
+    ['Mahbubnagar', 'Telangana'],
+    ['Suryapet', 'Telangana'],
+    ['Adilabad', 'Telangana'],
+    ['Mancherial', 'Telangana'],
+    ['Ramagundam', 'Telangana'],
+    ['Hanamkonda', 'Telangana'],
+    ['Siddipet', 'Telangana'],
+    ['Medak', 'Telangana'],
+    ['Sangareddy', 'Telangana'],
+    ['Jagtial', 'Telangana'],
+    ['Kamareddy', 'Telangana'],
+    ['Miryalaguda', 'Telangana'],
+    ['Bhongir', 'Telangana'],
+    ['Visakhapatnam', 'Andhra Pradesh'],
+    ['Vijayawada', 'Andhra Pradesh'],
+    ['Guntur', 'Andhra Pradesh'],
+    ['Nellore', 'Andhra Pradesh'],
+    ['Tirupati', 'Andhra Pradesh'],
+    ['Kurnool', 'Andhra Pradesh'],
+    ['Kakinada', 'Andhra Pradesh'],
+    ['Rajahmundry', 'Andhra Pradesh'],
+    ['Kadapa', 'Andhra Pradesh'],
+    ['Anantapur', 'Andhra Pradesh'],
+    ['Ongole', 'Andhra Pradesh'],
+    ['Vizianagaram', 'Andhra Pradesh'],
+    ['Eluru', 'Andhra Pradesh'],
+    ['Proddatur', 'Andhra Pradesh'],
+    ['Nandyal', 'Andhra Pradesh'],
+    ['Adoni', 'Andhra Pradesh'],
+    ['Madanapalle', 'Andhra Pradesh'],
+    ['Machilipatnam', 'Andhra Pradesh'],
+    ['Tenali', 'Andhra Pradesh'],
+    ['Chittoor', 'Andhra Pradesh'],
+    ['Hindupur', 'Andhra Pradesh'],
+    ['Srikakulam', 'Andhra Pradesh'],
+    ['Bhimavaram', 'Andhra Pradesh'],
+    ['Tadepalligudem', 'Andhra Pradesh'],
+    ['Rajam', 'Andhra Pradesh'],
+    ['Bobbili', 'Andhra Pradesh'],
+    ['Parvathipuram', 'Andhra Pradesh'],
+    ['Salur', 'Andhra Pradesh'],
+    ['Palasa', 'Andhra Pradesh'],
+    ['Tekkali', 'Andhra Pradesh'],
+    ['Amalapuram', 'Andhra Pradesh'],
+    ['Mandapeta', 'Andhra Pradesh'],
+    ['Ravulapalem', 'Andhra Pradesh'],
+    ['Tuni', 'Andhra Pradesh'],
+    ['Anakapalli', 'Andhra Pradesh'],
+    ['Narsipatnam', 'Andhra Pradesh'],
+    ['Pithapuram', 'Andhra Pradesh'],
+    ['Samalkot', 'Andhra Pradesh'],
+    ['Gudivada', 'Andhra Pradesh'],
+    ['Nuzvid', 'Andhra Pradesh'],
+    ['Repalle', 'Andhra Pradesh'],
+    ['Chirala', 'Andhra Pradesh'],
+    ['Markapur', 'Andhra Pradesh'],
+    ['Kandukur', 'Andhra Pradesh'],
+    ['Rayachoti', 'Andhra Pradesh'],
+    ['Jammalamadugu', 'Andhra Pradesh'],
+    ['Tadipatri', 'Andhra Pradesh'],
+    ['Guntakal', 'Andhra Pradesh'],
+    ['Dharmavaram', 'Andhra Pradesh'],
+    ['Puttaparthi', 'Andhra Pradesh'],
+    ['Kavali', 'Andhra Pradesh'],
+    ['Gudur', 'Andhra Pradesh'],
+    ['Sullurupeta', 'Andhra Pradesh'],
+    ['Venkatagiri', 'Andhra Pradesh'],
+    ['Puttur', 'Andhra Pradesh'],
+    ['Nagari', 'Andhra Pradesh'],
+    ['Palamaner', 'Andhra Pradesh'],
+  ].map(([city, state]) => [city.toLowerCase(), state])
+);
+
+const customerMasterImport = [
+  {
+    id: 'CUS-SRI-LAKSHMI-KIRANA-STORES',
+    name: 'Sri Lakshmi Kirana Stores',
+    type: 'Retail',
+    phone: '9876502101',
+    city: 'Hyderabad',
+    deliveryPreference: 'Navata Road Transport',
+    creditLimit: 50000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-GANESH-GENERAL-STORES',
+    name: 'Ganesh General Stores',
+    type: 'Retail',
+    phone: '9876502102',
+    city: 'Secunderabad',
+    deliveryPreference: 'Auto Transport',
+    creditLimit: 45000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-SAI-BALAJI-PROVISIONS',
+    name: 'Sri Sai Balaji Provisions',
+    type: 'Wholesale',
+    phone: '9876502103',
+    city: 'Warangal',
+    deliveryPreference: 'Kranti Road Transport',
+    creditLimit: 75000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-VENKATESWARA-TEA-STALL',
+    name: 'Venkateswara Tea Stall',
+    type: 'Hotel',
+    phone: '9876502104',
+    city: 'Karimnagar',
+    deliveryPreference: 'APSRTC Bus Parcel',
+    creditLimit: 25000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-DURGA-TIFFIN-CENTER',
+    name: 'Sri Durga Tiffin Center',
+    type: 'Hotel',
+    phone: '9876502105',
+    city: 'Khammam',
+    deliveryPreference: 'SBT Transport',
+    creditLimit: 30000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRINIVASA-GROCERY-MART',
+    name: 'Srinivasa Grocery Mart',
+    type: 'Retail',
+    phone: '9876502106',
+    city: 'Nizamabad',
+    deliveryPreference: 'Navata Road Transport',
+    creditLimit: 40000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-LAKSHMI-NARASIMHA-GENERAL-STORES',
+    name: 'Lakshmi Narasimha General Stores',
+    type: 'Retail',
+    phone: '9876502107',
+    city: 'Nalgonda',
+    deliveryPreference: 'Kranti Road Transport',
+    creditLimit: 35000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-RAGHAVENDRA-KIRANA-COOL-DRINKS',
+    name: 'Raghavendra Kirana & Cool Drinks',
+    type: 'Retail',
+    phone: '9876502108',
+    city: 'Mahbubnagar',
+    deliveryPreference: 'Auto Transport',
+    creditLimit: 30000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-MANIKANTA-TEA-POINT',
+    name: 'Sri Manikanta Tea Point',
+    type: 'Hotel',
+    phone: '9876502109',
+    city: 'Suryapet',
+    deliveryPreference: 'APSRTC Bus Parcel',
+    creditLimit: 20000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-PADMAVATHI-PROVISIONS',
+    name: 'Padmavathi Provisions',
+    type: 'Retail',
+    phone: '9876502110',
+    city: 'Adilabad',
+    deliveryPreference: 'VRL Logistics',
+    creditLimit: 45000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SAI-GANESH-MINI-MART',
+    name: 'Sai Ganesh Mini Mart',
+    type: 'Retail',
+    phone: '9876502111',
+    city: 'Mancherial',
+    deliveryPreference: 'Navata Road Transport',
+    creditLimit: 35000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-BALAJI-WHOLESALE-TRADERS',
+    name: 'Sri Balaji Wholesale Traders',
+    type: 'Wholesale',
+    phone: '9876502112',
+    city: 'Ramagundam',
+    deliveryPreference: 'Kranti Road Transport',
+    creditLimit: 90000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-KAKATIYA-GENERAL-STORES',
+    name: 'Kakatiya General Stores',
+    type: 'Retail',
+    phone: '9876502113',
+    city: 'Hanamkonda',
+    deliveryPreference: 'SBT Transport',
+    creditLimit: 40000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-MALLIKARJUNA-TEA-STALL',
+    name: 'Mallikarjuna Tea Stall',
+    type: 'Hotel',
+    phone: '9876502114',
+    city: 'Siddipet',
+    deliveryPreference: 'Auto Transport',
+    creditLimit: 25000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-VENKATA-SAI-KIRANA',
+    name: 'Sri Venkata Sai Kirana',
+    type: 'Retail',
+    phone: '9876502115',
+    city: 'Medak',
+    deliveryPreference: 'Navata Road Transport',
+    creditLimit: 35000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-JAI-BHAVANI-PROVISIONS',
+    name: 'Jai Bhavani Provisions',
+    type: 'Retail',
+    phone: '9876502116',
+    city: 'Sangareddy',
+    deliveryPreference: 'Kranti Road Transport',
+    creditLimit: 40000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-ANJANEYA-GENERAL-STORES',
+    name: 'Sri Anjaneya General Stores',
+    type: 'Retail',
+    phone: '9876502117',
+    city: 'Jagtial',
+    deliveryPreference: 'APSRTC Bus Parcel',
+    creditLimit: 35000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-BALAJI-TIFFIN-MEALS',
+    name: 'Balaji Tiffin & Meals',
+    type: 'Hotel',
+    phone: '9876502118',
+    city: 'Kamareddy',
+    deliveryPreference: 'SBT Transport',
+    creditLimit: 30000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-RAMAKRISHNA-KIRANA-STORES',
+    name: 'Sri Ramakrishna Kirana Stores',
+    type: 'Retail',
+    phone: '9876502119',
+    city: 'Miryalaguda',
+    deliveryPreference: 'Auto Transport',
+    creditLimit: 35000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-SAI-TRADERS',
+    name: 'Sri Sai Traders',
+    type: 'Wholesale',
+    phone: '9876502120',
+    city: 'Bhongir',
+    deliveryPreference: 'Navata Road Transport',
+    creditLimit: 70000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-VIJAYA-LAKSHMI-GENERAL-STORES',
+    name: 'Vijaya Lakshmi General Stores',
+    type: 'Retail',
+    phone: '9876502121',
+    city: 'Visakhapatnam',
+    deliveryPreference: 'Kranti Road Transport',
+    creditLimit: 50000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-KANAKA-DURGA-PROVISIONS',
+    name: 'Sri Kanaka Durga Provisions',
+    type: 'Retail',
+    phone: '9876502122',
+    city: 'Vijayawada',
+    deliveryPreference: 'Navata Road Transport',
+    creditLimit: 55000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-VENKATESWARA-WHOLESALE-STORES',
+    name: 'Venkateswara Wholesale Stores',
+    type: 'Wholesale',
+    phone: '9876502123',
+    city: 'Guntur',
+    deliveryPreference: 'Kranti Road Transport',
+    creditLimit: 85000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-LAKSHMI-NARAYANA-KIRANA',
+    name: 'Sri Lakshmi Narayana Kirana',
+    type: 'Retail',
+    phone: '9876502124',
+    city: 'Nellore',
+    deliveryPreference: 'SBT Transport',
+    creditLimit: 45000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-PADMAVATHI-TEA-SNACKS',
+    name: 'Sri Padmavathi Tea & Snacks',
+    type: 'Hotel',
+    phone: '9876502125',
+    city: 'Tirupati',
+    deliveryPreference: 'APSRTC Bus Parcel',
+    creditLimit: 30000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SAI-RAM-GENERAL-STORES',
+    name: 'Sai Ram General Stores',
+    type: 'Retail',
+    phone: '9876502126',
+    city: 'Kurnool',
+    deliveryPreference: 'VRL Logistics',
+    creditLimit: 40000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-VENKATESWARA-GROCERY',
+    name: 'Sri Venkateswara Grocery',
+    type: 'Retail',
+    phone: '9876502127',
+    city: 'Kakinada',
+    deliveryPreference: 'Navata Road Transport',
+    creditLimit: 45000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-RAJESHWARI-PROVISIONS',
+    name: 'Rajeshwari Provisions',
+    type: 'Retail',
+    phone: '9876502128',
+    city: 'Rajahmundry',
+    deliveryPreference: 'Kranti Road Transport',
+    creditLimit: 50000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-SAI-BALAJI-KIRANA',
+    name: 'Sri Sai Balaji Kirana',
+    type: 'Retail',
+    phone: '9876502129',
+    city: 'Kadapa',
+    deliveryPreference: 'SBT Transport',
+    creditLimit: 40000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-LAKSHMI-TIFFIN-CENTER',
+    name: 'Sri Lakshmi Tiffin Center',
+    type: 'Hotel',
+    phone: '9876502130',
+    city: 'Anantapur',
+    deliveryPreference: 'Auto Transport',
+    creditLimit: 30000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-GANAPATHI-GENERAL-STORES',
+    name: 'Ganapathi General Stores',
+    type: 'Retail',
+    phone: '9876502131',
+    city: 'Ongole',
+    deliveryPreference: 'Navata Road Transport',
+    creditLimit: 40000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-DURGA-WHOLESALE-TRADERS',
+    name: 'Sri Durga Wholesale Traders',
+    type: 'Wholesale',
+    phone: '9876502132',
+    city: 'Vizianagaram',
+    deliveryPreference: 'Kranti Road Transport',
+    creditLimit: 80000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-VENKATA-RAMANA-KIRANA',
+    name: 'Venkata Ramana Kirana',
+    type: 'Retail',
+    phone: '9876502133',
+    city: 'Eluru',
+    deliveryPreference: 'SBT Transport',
+    creditLimit: 45000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-SATYA-SAI-PROVISIONS',
+    name: 'Sri Satya Sai Provisions',
+    type: 'Retail',
+    phone: '9876502134',
+    city: 'Proddatur',
+    deliveryPreference: 'APSRTC Bus Parcel',
+    creditLimit: 40000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SIVA-GANESH-TEA-STALL',
+    name: 'Siva Ganesh Tea Stall',
+    type: 'Hotel',
+    phone: '9876502135',
+    city: 'Nandyal',
+    deliveryPreference: 'Auto Transport',
+    creditLimit: 25000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-MALLIKARJUNA-STORES',
+    name: 'Sri Mallikarjuna Stores',
+    type: 'Retail',
+    phone: '9876502136',
+    city: 'Adoni',
+    deliveryPreference: 'Navata Road Transport',
+    creditLimit: 35000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-LAKSHMI-NARASIMHA-MART',
+    name: 'Sri Lakshmi Narasimha Mart',
+    type: 'Retail',
+    phone: '9876502137',
+    city: 'Madanapalle',
+    deliveryPreference: 'Kranti Road Transport',
+    creditLimit: 40000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-RAMA-GENERAL-STORES',
+    name: 'Sri Rama General Stores',
+    type: 'Retail',
+    phone: '9876502138',
+    city: 'Machilipatnam',
+    deliveryPreference: 'SBT Transport',
+    creditLimit: 35000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-VIJAYA-DURGA-KIRANA-STORES',
+    name: 'Vijaya Durga Kirana Stores',
+    type: 'Retail',
+    phone: '9876502139',
+    city: 'Tenali',
+    deliveryPreference: 'Navata Road Transport',
+    creditLimit: 45000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-VENKATA-LAKSHMI-TRADERS',
+    name: 'Sri Venkata Lakshmi Traders',
+    type: 'Wholesale',
+    phone: '9876502140',
+    city: 'Chittoor',
+    deliveryPreference: 'Kranti Road Transport',
+    creditLimit: 75000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-BALAJI-TEA-COOL-DRINKS',
+    name: 'Balaji Tea & Cool Drinks',
+    type: 'Hotel',
+    phone: '9876502141',
+    city: 'Hindupur',
+    deliveryPreference: 'APSRTC Bus Parcel',
+    creditLimit: 25000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-SAI-GANESH-PROVISIONS',
+    name: 'Sri Sai Ganesh Provisions',
+    type: 'Retail',
+    phone: '9876502142',
+    city: 'Srikakulam',
+    deliveryPreference: 'SBT Transport',
+    creditLimit: 40000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-BHAVANI-GENERAL-STORES',
+    name: 'Sri Bhavani General Stores',
+    type: 'Retail',
+    phone: '9876502143',
+    city: 'Bhimavaram',
+    deliveryPreference: 'Navata Road Transport',
+    creditLimit: 45000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-DURGA-KIRANA-RICE-DEPOT',
+    name: 'Sri Durga Kirana & Rice Depot',
+    type: 'Retail',
+    phone: '9876502144',
+    city: 'Tadepalligudem',
+    deliveryPreference: 'Kranti Road Transport',
+    creditLimit: 50000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-LAKSHMI-GANAPATHI-STORES',
+    name: 'Sri Lakshmi Ganapathi Stores',
+    type: 'Retail',
+    phone: '9876502145',
+    city: 'Rajam',
+    deliveryPreference: 'Auto Transport',
+    creditLimit: 35000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-RAMA-TEA-POINT',
+    name: 'Sri Rama Tea Point',
+    type: 'Hotel',
+    phone: '9876502146',
+    city: 'Bobbili',
+    deliveryPreference: 'APSRTC Bus Parcel',
+    creditLimit: 22000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-VENKATESWARA-MINI-MART',
+    name: 'Venkateswara Mini Mart',
+    type: 'Retail',
+    phone: '9876502147',
+    city: 'Parvathipuram',
+    deliveryPreference: 'Navata Road Transport',
+    creditLimit: 35000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-KANAKA-MAHALAXMI-STORES',
+    name: 'Sri Kanaka Mahalaxmi Stores',
+    type: 'Retail',
+    phone: '9876502148',
+    city: 'Salur',
+    deliveryPreference: 'SBT Transport',
+    creditLimit: 35000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SAI-KRISHNA-GENERAL-STORES',
+    name: 'Sai Krishna General Stores',
+    type: 'Retail',
+    phone: '9876502149',
+    city: 'Palasa',
+    deliveryPreference: 'Kranti Road Transport',
+    creditLimit: 35000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-DURGA-PROVISIONS',
+    name: 'Sri Durga Provisions',
+    type: 'Retail',
+    phone: '9876502150',
+    city: 'Tekkali',
+    deliveryPreference: 'APSRTC Bus Parcel',
+    creditLimit: 35000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-VENKATA-SAI-TRADERS',
+    name: 'Sri Venkata Sai Traders',
+    type: 'Wholesale',
+    phone: '9876502151',
+    city: 'Amalapuram',
+    deliveryPreference: 'Navata Road Transport',
+    creditLimit: 75000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-LAKSHMI-RICE-KIRANA',
+    name: 'Sri Lakshmi Rice & Kirana',
+    type: 'Retail',
+    phone: '9876502152',
+    city: 'Mandapeta',
+    deliveryPreference: 'Kranti Road Transport',
+    creditLimit: 40000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-SATYA-GENERAL-STORES',
+    name: 'Sri Satya General Stores',
+    type: 'Retail',
+    phone: '9876502153',
+    city: 'Ravulapalem',
+    deliveryPreference: 'SBT Transport',
+    creditLimit: 35000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-RAMA-KRISHNA-TEA-STALL',
+    name: 'Sri Rama Krishna Tea Stall',
+    type: 'Hotel',
+    phone: '9876502154',
+    city: 'Tuni',
+    deliveryPreference: 'Auto Transport',
+    creditLimit: 25000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-BHAVANI-KIRANA-STORES',
+    name: 'Bhavani Kirana Stores',
+    type: 'Retail',
+    phone: '9876502155',
+    city: 'Anakapalli',
+    deliveryPreference: 'Navata Road Transport',
+    creditLimit: 45000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-VENKATESWARA-PROVISIONS',
+    name: 'Sri Venkateswara Provisions',
+    type: 'Retail',
+    phone: '9876502156',
+    city: 'Narsipatnam',
+    deliveryPreference: 'Kranti Road Transport',
+    creditLimit: 40000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SAI-DURGA-HOTEL-TIFFINS',
+    name: 'Sai Durga Hotel & Tiffins',
+    type: 'Hotel',
+    phone: '9876502157',
+    city: 'Pithapuram',
+    deliveryPreference: 'APSRTC Bus Parcel',
+    creditLimit: 30000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-MANIKANTA-KIRANA',
+    name: 'Sri Manikanta Kirana',
+    type: 'Retail',
+    phone: '9876502158',
+    city: 'Samalkot',
+    deliveryPreference: 'SBT Transport',
+    creditLimit: 35000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-LAKSHMI-BALAJI-STORES',
+    name: 'Sri Lakshmi Balaji Stores',
+    type: 'Retail',
+    phone: '9876502159',
+    city: 'Gudivada',
+    deliveryPreference: 'Navata Road Transport',
+    creditLimit: 40000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-KANAKA-DURGA-TEA-STALL',
+    name: 'Sri Kanaka Durga Tea Stall',
+    type: 'Hotel',
+    phone: '9876502160',
+    city: 'Nuzvid',
+    deliveryPreference: 'Auto Transport',
+    creditLimit: 25000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-SAI-WHOLESALE-MART',
+    name: 'Sri Sai Wholesale Mart',
+    type: 'Wholesale',
+    phone: '9876502161',
+    city: 'Repalle',
+    deliveryPreference: 'Kranti Road Transport',
+    creditLimit: 70000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-VENKATA-RAMANA-STORES',
+    name: 'Sri Venkata Ramana Stores',
+    type: 'Retail',
+    phone: '9876502162',
+    city: 'Chirala',
+    deliveryPreference: 'SBT Transport',
+    creditLimit: 45000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-LAKSHMI-PROVISIONS',
+    name: 'Sri Lakshmi Provisions',
+    type: 'Retail',
+    phone: '9876502163',
+    city: 'Markapur',
+    deliveryPreference: 'Navata Road Transport',
+    creditLimit: 40000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-GANESH-KIRANA-GENERAL-STORES',
+    name: 'Ganesh Kirana & General Stores',
+    type: 'Retail',
+    phone: '9876502164',
+    city: 'Kandukur',
+    deliveryPreference: 'APSRTC Bus Parcel',
+    creditLimit: 35000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-BHAVANI-TEA-POINT',
+    name: 'Sri Bhavani Tea Point',
+    type: 'Hotel',
+    phone: '9876502165',
+    city: 'Rayachoti',
+    deliveryPreference: 'Auto Transport',
+    creditLimit: 25000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-SAI-RAM-TRADERS',
+    name: 'Sri Sai Ram Traders',
+    type: 'Wholesale',
+    phone: '9876502166',
+    city: 'Jammalamadugu',
+    deliveryPreference: 'Kranti Road Transport',
+    creditLimit: 70000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-VENKATESWARA-GENERAL-STORES',
+    name: 'Sri Venkateswara General Stores',
+    type: 'Retail',
+    phone: '9876502167',
+    city: 'Tadipatri',
+    deliveryPreference: 'Navata Road Transport',
+    creditLimit: 40000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-LAKSHMI-NARAYANA-HOTEL',
+    name: 'Sri Lakshmi Narayana Hotel',
+    type: 'Hotel',
+    phone: '9876502168',
+    city: 'Guntakal',
+    deliveryPreference: 'SBT Transport',
+    creditLimit: 30000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-ANJANEYA-KIRANA',
+    name: 'Sri Anjaneya Kirana',
+    type: 'Retail',
+    phone: '9876502169',
+    city: 'Dharmavaram',
+    deliveryPreference: 'APSRTC Bus Parcel',
+    creditLimit: 35000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SAI-BALAJI-PROVISIONS',
+    name: 'Sai Balaji Provisions',
+    type: 'Retail',
+    phone: '9876502170',
+    city: 'Puttaparthi',
+    deliveryPreference: 'Auto Transport',
+    creditLimit: 35000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-PADMAVATHI-GENERAL-STORES',
+    name: 'Sri Padmavathi General Stores',
+    type: 'Retail',
+    phone: '9876502171',
+    city: 'Kavali',
+    deliveryPreference: 'Navata Road Transport',
+    creditLimit: 40000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-RAMA-TRADERS',
+    name: 'Sri Rama Traders',
+    type: 'Wholesale',
+    phone: '9876502172',
+    city: 'Gudur',
+    deliveryPreference: 'Kranti Road Transport',
+    creditLimit: 70000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-VENKATA-SAI-TEA-STALL',
+    name: 'Sri Venkata Sai Tea Stall',
+    type: 'Hotel',
+    phone: '9876502173',
+    city: 'Sullurupeta',
+    deliveryPreference: 'APSRTC Bus Parcel',
+    creditLimit: 25000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-LAKSHMI-GANESH-STORES',
+    name: 'Sri Lakshmi Ganesh Stores',
+    type: 'Retail',
+    phone: '9876502174',
+    city: 'Venkatagiri',
+    deliveryPreference: 'SBT Transport',
+    creditLimit: 35000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-SAI-DURGA-PROVISIONS',
+    name: 'Sri Sai Durga Provisions',
+    type: 'Retail',
+    phone: '9876502175',
+    city: 'Puttur',
+    deliveryPreference: 'Auto Transport',
+    creditLimit: 35000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-BALAJI-GENERAL-MERCHANTS',
+    name: 'Balaji General Merchants',
+    type: 'Retail',
+    phone: '9876502176',
+    city: 'Nagari',
+    deliveryPreference: 'Navata Road Transport',
+    creditLimit: 35000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-VENKATESWARA-KIRANA',
+    name: 'Sri Venkateswara Kirana',
+    type: 'Retail',
+    phone: '9876502177',
+    city: 'Palamaner',
+    deliveryPreference: 'Kranti Road Transport',
+    creditLimit: 40000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-SAI-TIFFIN-CENTER',
+    name: 'Sri Sai Tiffin Center',
+    type: 'Hotel',
+    phone: '9876502178',
+    city: 'Hyderabad',
+    deliveryPreference: 'Auto Transport',
+    creditLimit: 30000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-HYDERABADJI-PROVISIONS-STORES',
+    name: 'Hyderabadji Provisions Stores',
+    type: 'Retail',
+    phone: '9876502179',
+    city: 'Hyderabad',
+    deliveryPreference: 'Navata Road Transport',
+    creditLimit: 50000,
+    outstanding: 0,
+  },
+  {
+    id: 'CUS-SRI-LAKSHMI-WHOLESALE-AGENCIES',
+    name: 'Sri Lakshmi Wholesale Agencies',
+    type: 'Wholesale',
+    phone: '9876502180',
+    city: 'Hyderabad',
+    deliveryPreference: 'Kranti Road Transport',
+    creditLimit: 95000,
+    outstanding: 0,
+  },
+].map((customer) => ({
+  ...customer,
+  state: getCustomerStateForCity(customer.city),
+}));
+
 const seedData = {
   suppliers: [
     {
       id: 'SUP-MOKALBARI',
       name: 'Mokalbari Estate',
       agentName: 'Ramesh Agent',
-      phone: '+91 90000 10421',
+      phone: '9000010421',
       region: 'Assam',
       paymentTerms: '15 days',
       outstanding: 45260,
@@ -25,9 +923,9 @@ const seedData = {
       id: 'SUP-EASTERN',
       name: 'Eastern Estates',
       agentName: 'Prakash Tea Brokers',
-      phone: '+91 90000 10446',
+      phone: '9000010446',
       region: 'Dooars',
-      paymentTerms: 'Cash/7 days',
+      paymentTerms: '7 days',
       outstanding: 15840,
       gstin: '',
       address: '',
@@ -36,7 +934,7 @@ const seedData = {
       id: 'SUP-BLUEMOUNTAIN',
       name: 'Blue Mountain Traders',
       agentName: 'Suresh Kumar',
-      phone: '+91 90000 10390',
+      phone: '9000010390',
       region: 'Nilgiri',
       paymentTerms: '20 days',
       outstanding: 0,
@@ -61,7 +959,7 @@ const seedData = {
       id: 'CUS-LAKSHMI',
       name: 'Sri Lakshmi Hotel Supplies',
       type: 'Wholesale',
-      phone: '+91 98855 00112',
+      phone: '9885500112',
       city: 'Rajahmundry',
       deliveryPreference: 'Auto transport',
       creditLimit: 75000,
@@ -71,12 +969,13 @@ const seedData = {
       id: 'CUS-SRINIVASA',
       name: 'Srinivasa Retail Stores',
       type: 'Retailer',
-      phone: '+91 98855 00133',
+      phone: '9885500133',
       city: 'Kakinada',
       deliveryPreference: 'Parcel service',
       creditLimit: 50000,
       outstanding: 0,
     },
+    ...customerMasterImport,
   ],
   rawLots: [
     {
@@ -249,6 +1148,10 @@ const seedData = {
       orderDate: '2025-04-21',
       status: 'Delivered',
       saleType: 'Wholesale',
+      paymentMode: 'Credit',
+      paidAmount: 0,
+      balanceDue: 11760,
+      paymentStatus: 'Due',
     },
   ],
   shipments: [
@@ -271,23 +1174,6 @@ const seedData = {
 };
 
 const EnterpriseContext = createContext(null);
-
-function numberValue(value, fallback = 0) {
-  const parsedValue = Number(value);
-  return Number.isFinite(parsedValue) ? parsedValue : fallback;
-}
-
-function presentNumber(value, fallback = 0) {
-  if (value === null || value === undefined || String(value).trim() === '') {
-    return fallback;
-  }
-
-  return numberValue(value, fallback);
-}
-
-function roundMoney(value) {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
-}
 
 function slugify(value, fallback = 'ITEM') {
   const slug = String(value || fallback)
@@ -551,9 +1437,7 @@ function getRawLotBagOptions(lot) {
 }
 
 function getAvailableBagCount(lot, bagSizeKg) {
-  const option = getRawLotBagOptions(lot).find((item) =>
-    bagSizeMatches(item.bagSizeKg, bagSizeKg)
-  );
+  const option = getRawLotBagOptions(lot).find((item) => bagSizeMatches(item.bagSizeKg, bagSizeKg));
 
   return option ? Math.floor(option.remainingBagCount) : 0;
 }
@@ -684,14 +1568,130 @@ function normalizeInvoiceDraft(draft) {
   };
 }
 
-function normalizeData(data) {
+function normalizeSupplierRecord(supplier) {
   return {
-    suppliers: data.suppliers || [],
+    ...supplier,
+    phone: normalizeIndianMobile(supplier.phone) || supplier.phone || '',
+    paymentTerms: validatePaymentTermDays(supplier.paymentTerms)
+      ? supplier.paymentTerms || ''
+      : formatPaymentTerms(supplier.paymentTerms),
+    gstin: sanitizeGstinInput(supplier.gstin),
+  };
+}
+
+function normalizeCustomerRecord(customer) {
+  const city = customer.city?.trim() || '';
+
+  return {
+    ...customer,
+    phone: normalizeIndianMobile(customer.phone) || customer.phone || '',
+    city,
+    state: customer.state?.trim() || getCustomerStateForCity(city),
+    address: customer.address || '',
+  };
+}
+
+function mergeCustomerMasterImport(customers) {
+  const importById = new Map(customerMasterImport.map((customer) => [customer.id, customer]));
+  const importByName = new Map(
+    customerMasterImport.map((customer) => [normalizeKey(customer.name), customer])
+  );
+  const importByPhone = new Map(
+    customerMasterImport
+      .map((customer) => [normalizeIndianMobile(customer.phone), customer])
+      .filter(([phone]) => phone)
+  );
+  const mergedCustomers = customers.map((customer) => {
+    const importedCustomer =
+      importById.get(customer.id) ||
+      importByName.get(normalizeKey(customer.name)) ||
+      importByPhone.get(normalizeIndianMobile(customer.phone));
+
+    if (!importedCustomer) {
+      return normalizeCustomerRecord(customer);
+    }
+
+    const imported = normalizeCustomerRecord(importedCustomer);
+    const current = normalizeCustomerRecord(customer);
+
+    return {
+      ...imported,
+      ...current,
+      type: current.type || imported.type,
+      phone: current.phone || imported.phone,
+      city: current.city || imported.city,
+      state: current.state || imported.state,
+      address: current.address || imported.address,
+      deliveryPreference: current.deliveryPreference || imported.deliveryPreference,
+      creditLimit: current.creditLimit ?? imported.creditLimit,
+      outstanding: current.outstanding ?? imported.outstanding,
+    };
+  });
+  const existingIds = new Set(mergedCustomers.map((customer) => customer.id).filter(Boolean));
+  const existingNames = new Set(mergedCustomers.map((customer) => normalizeKey(customer.name)));
+  const existingPhones = new Set(
+    mergedCustomers.map((customer) => normalizeIndianMobile(customer.phone)).filter(Boolean)
+  );
+
+  const importedCustomers = [];
+
+  customerMasterImport.forEach((customer) => {
+    const nameKey = normalizeKey(customer.name);
+    const phone = normalizeIndianMobile(customer.phone);
+
+    if (
+      existingIds.has(customer.id) ||
+      existingNames.has(nameKey) ||
+      (phone && existingPhones.has(phone))
+    ) {
+      return;
+    }
+
+    const normalizedCustomer = normalizeCustomerRecord(customer);
+    importedCustomers.push(normalizedCustomer);
+    existingIds.add(normalizedCustomer.id);
+    existingNames.add(nameKey);
+
+    if (phone) {
+      existingPhones.add(phone);
+    }
+  });
+
+  return [...mergedCustomers, ...importedCustomers];
+}
+
+function normalizeSalesOrderRecord(order) {
+  const revenue = numberValue(order.revenue);
+  const paidAmount =
+    order.paidAmount === undefined
+      ? order.paymentMode && order.paymentMode !== 'Credit'
+        ? revenue
+        : 0
+      : numberValue(order.paidAmount);
+  const balanceDue =
+    order.balanceDue === undefined
+      ? Math.max(roundMoney(revenue - paidAmount), 0)
+      : Math.max(roundMoney(numberValue(order.balanceDue)), 0);
+
+  return {
+    ...order,
+    paymentMode: order.paymentMode || (paidAmount > 0 ? 'Paid' : 'Credit'),
+    paidAmount: roundMoney(paidAmount),
+    balanceDue,
+    paymentStatus: order.paymentStatus || (balanceDue > 0 ? 'Due' : 'Paid'),
+  };
+}
+
+function normalizeData(data) {
+  const customers = (data.customers || []).map(normalizeCustomerRecord);
+
+  return {
+    suppliers: (data.suppliers || []).map(normalizeSupplierRecord),
     supplierPayments: data.supplierPayments || [],
-    customers: data.customers || [],
+    customers: mergeCustomerMasterImport(customers),
     rawLots: (data.rawLots || []).map(normalizeRawLot),
     blendBatches: data.blendBatches || [],
-    salesOrders: data.salesOrders || [],
+    salesOrders: (data.salesOrders || []).map(normalizeSalesOrderRecord),
     shipments: data.shipments || [],
     invoiceReceipts: (data.invoiceReceipts || []).map(normalizeInvoiceReceipt),
     invoiceDrafts: (data.invoiceDrafts || []).map(normalizeInvoiceDraft),
@@ -713,8 +1713,7 @@ function createBlendPreview(form, rawLots) {
       const lot = rawLots.find((rawLot) => rawLot.id === component.lotId);
       const bagSizeKg = normalizeBagSize(component.bagSizeKg);
       const bagCount = presentNumber(component.bagCount);
-      const kgFromBags =
-        bagSizeKg > 0 && bagCount > 0 ? roundMoney(bagSizeKg * bagCount) : 0;
+      const kgFromBags = bagSizeKg > 0 && bagCount > 0 ? roundMoney(bagSizeKg * bagCount) : 0;
       const kgUsed = presentNumber(component.kg ?? component.kgUsed, kgFromBags);
 
       if (!lot || kgUsed <= 0) {
@@ -724,8 +1723,7 @@ function createBlendPreview(form, rawLots) {
       return {
         lot,
         bagSizeKg,
-        bagCount:
-          bagCount > 0 ? bagCount : bagSizeKg > 0 ? roundMoney(kgUsed / bagSizeKg) : 0,
+        bagCount: bagCount > 0 ? bagCount : bagSizeKg > 0 ? roundMoney(kgUsed / bagSizeKg) : 0,
         bagIds: component.bagIds || [],
         kgUsed,
         cost: roundMoney(kgUsed * lot.costPerKg),
@@ -779,6 +1777,10 @@ function normalizeKey(value) {
     .trim()
     .toLowerCase()
     .replace(/\s+/g, ' ');
+}
+
+function getCustomerStateForCity(city) {
+  return customerStateByCity.get(normalizeKey(city)) || '';
 }
 
 function regionFromAddress(address) {
@@ -975,6 +1977,36 @@ function getInvoiceReversalBlockersForData(data, invoice) {
 
 export function EnterpriseProvider({ children }) {
   const [data, setData] = useState(loadData);
+  const dataWithCustomerStates = useMemo(() => {
+    const mergedCustomers = mergeCustomerMasterImport(
+      (data.customers || []).map(normalizeCustomerRecord)
+    );
+
+    if (JSON.stringify(mergedCustomers) === JSON.stringify(data.customers || [])) {
+      return data;
+    }
+
+    return {
+      ...data,
+      customers: mergedCustomers,
+    };
+  }, [data]);
+
+  useEffect(() => {
+    setData((currentData) => {
+      const normalizedCustomers = (currentData.customers || []).map(normalizeCustomerRecord);
+      const mergedCustomers = mergeCustomerMasterImport(normalizedCustomers);
+
+      if (JSON.stringify(mergedCustomers) === JSON.stringify(currentData.customers || [])) {
+        return currentData;
+      }
+
+      return {
+        ...currentData,
+        customers: mergedCustomers,
+      };
+    });
+  }, [data.customers]);
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -1027,9 +2059,25 @@ export function EnterpriseProvider({ children }) {
 
   function addSupplier(form) {
     const supplierName = form.name.trim();
+    const phoneError = validateOptionalIndianMobile(form.phone, 'Supplier phone');
+    const gstin = sanitizeGstinInput(form.gstin);
+    const gstinError = validateOptionalGstin(gstin, 'Supplier GSTIN');
+    const termsError = validatePaymentTermDays(form.paymentTerms);
 
     if (!supplierName) {
       throw new Error('Supplier name is required.');
+    }
+
+    if (phoneError) {
+      throw new Error(phoneError);
+    }
+
+    if (gstinError) {
+      throw new Error(gstinError);
+    }
+
+    if (termsError) {
+      throw new Error(termsError);
     }
 
     if (
@@ -1042,10 +2090,10 @@ export function EnterpriseProvider({ children }) {
       id: makeId('SUP', supplierName),
       name: supplierName,
       agentName: form.agentName.trim(),
-      phone: form.phone.trim(),
+      phone: normalizeIndianMobile(form.phone),
       region: form.region.trim(),
-      paymentTerms: form.paymentTerms.trim() || '7 days',
-      gstin: form.gstin?.trim() || '',
+      paymentTerms: formatPaymentTerms(form.paymentTerms),
+      gstin,
       address: form.address?.trim() || '',
       outstanding: 0,
     };
@@ -1060,12 +2108,27 @@ export function EnterpriseProvider({ children }) {
 
   function approveInvoiceReceipt(draft) {
     const vendorName = draft.vendor?.name?.trim();
+    const vendorPhoneError = validateOptionalIndianMobile(draft.vendor?.phone, 'Vendor phone');
+    const vendorGstin = sanitizeGstinInput(draft.vendor?.gstin);
+    const vendorGstinError = validateOptionalGstin(vendorGstin, 'Vendor GSTIN');
     const invoiceNumber = draft.invoice?.number?.trim() || 'Unnumbered';
     const invoiceDate = draft.invoice?.date || today;
     const draftItems = (draft.items || []).filter((item) => item.teaName?.trim());
 
     if (!vendorName) {
       throw new Error('Vendor name is required before approving the invoice.');
+    }
+
+    if (vendorPhoneError) {
+      throw new Error(vendorPhoneError);
+    }
+
+    if (vendorGstinError) {
+      throw new Error(vendorGstinError);
+    }
+
+    if (invoiceDate > today) {
+      throw new Error('Invoice date cannot be in the future.');
     }
 
     if (!draftItems.length) {
@@ -1093,11 +2156,11 @@ export function EnterpriseProvider({ children }) {
       id: makeId('SUP', vendorName),
       name: vendorName,
       agentName: 'Invoice Intake',
-      phone: draft.vendor?.phone?.trim() || '',
+      phone: normalizeIndianMobile(draft.vendor?.phone),
       region: regionFromAddress(draft.vendor?.address),
       paymentTerms: 'Invoice due',
       outstanding: 0,
-      gstin: draft.vendor?.gstin?.trim() || '',
+      gstin: vendorGstin,
       address: draft.vendor?.address?.trim() || '',
     };
     const invoiceId = makeId('INV', invoiceNumber);
@@ -1116,7 +2179,9 @@ export function EnterpriseProvider({ children }) {
         const grade = item.grade?.trim() || item.hsn?.trim() || 'Invoice';
         const bagSpecs = getDraftBagSpecs(item, numbers);
         const bagWeightKg =
-          numbers.quantity > 0 ? numbers.receivedKg / numbers.quantity : bagSpecs[0]?.bagSizeKg || 1;
+          numbers.quantity > 0
+            ? numbers.receivedKg / numbers.quantity
+            : bagSpecs[0]?.bagSizeKg || 1;
         const rawLotId = makeId('RAW', `${item.teaName}-${grade}`);
 
         return {
@@ -1151,10 +2216,7 @@ export function EnterpriseProvider({ children }) {
         normalizedCharges
           .filter((charge) => charge.includeInLandedCost)
           .reduce((total, charge) => total + charge.amount, 0);
-      const totalReceivedKg = lineItems.reduce(
-        (total, line) => total + line.numbers.receivedKg,
-        0
-      );
+      const totalReceivedKg = lineItems.reduce((total, line) => total + line.numbers.receivedKg, 0);
       const lineItemsWithCosts = lineItems.map((line) => {
         const allocationRatio =
           totalReceivedKg > 0 ? line.numbers.receivedKg / totalReceivedKg : 1 / lineItems.length;
@@ -1229,7 +2291,7 @@ export function EnterpriseProvider({ children }) {
         supplierId: currentSupplier.id,
         supplierName: currentSupplier.name,
         vendorAddress: draft.vendor?.address?.trim() || '',
-        vendorGstin: draft.vendor?.gstin?.trim() || '',
+        vendorGstin,
         sourceName: draft.sourceName || '',
         sourceType: draft.sourceType || '',
         pageCount: presentNumber(draft.pageCount),
@@ -1283,6 +2345,7 @@ export function EnterpriseProvider({ children }) {
             supplier.id === currentSupplier.id
               ? {
                   ...supplier,
+                  phone: supplier.phone || currentSupplier.phone,
                   gstin: supplier.gstin || currentSupplier.gstin,
                   address: supplier.address || currentSupplier.address,
                   outstanding: roundMoney(
@@ -1429,11 +2492,12 @@ export function EnterpriseProvider({ children }) {
   }
 
   function recordSupplierPayment(paymentInput, legacyAmount) {
-    const supplierId =
-      typeof paymentInput === 'object' ? paymentInput.supplierId : paymentInput;
+    const supplierId = typeof paymentInput === 'object' ? paymentInput.supplierId : paymentInput;
     const amount = typeof paymentInput === 'object' ? paymentInput.amount : legacyAmount;
     const supplier = data.suppliers.find((item) => item.id === supplierId);
     const payment = numberValue(amount);
+    const paymentDate =
+      typeof paymentInput === 'object' ? paymentInput.paymentDate || today : today;
 
     if (!supplier) {
       throw new Error('Select a supplier before recording payment.');
@@ -1455,13 +2519,16 @@ export function EnterpriseProvider({ children }) {
       );
     }
 
+    if (paymentDate > today) {
+      throw new Error('Payment date cannot be in the future.');
+    }
+
     const paymentRecord = {
       id: makeId('PAY', supplier.name),
       supplierId: supplier.id,
       supplierName: supplier.name,
       amount: roundMoney(payment),
-      paymentDate:
-        typeof paymentInput === 'object' ? paymentInput.paymentDate || today : today,
+      paymentDate,
       mode: typeof paymentInput === 'object' ? paymentInput.mode || 'Bank transfer' : 'Manual',
       reference: typeof paymentInput === 'object' ? paymentInput.reference?.trim() || '' : '',
       note: typeof paymentInput === 'object' ? paymentInput.note?.trim() || '' : '',
@@ -1484,14 +2551,38 @@ export function EnterpriseProvider({ children }) {
   }
 
   function addCustomer(form) {
+    const customerName = form.name.trim();
+    const phoneError = validateOptionalIndianMobile(form.phone, 'Customer phone');
+    const creditLimit = numberValue(form.creditLimit, 50000);
+
+    if (!customerName) {
+      throw new Error('Customer name is required.');
+    }
+
+    if (phoneError) {
+      throw new Error(phoneError);
+    }
+
+    if (creditLimit < 0) {
+      throw new Error('Credit limit cannot be negative.');
+    }
+
+    if (
+      data.customers.some((customer) => normalizeKey(customer.name) === normalizeKey(customerName))
+    ) {
+      throw new Error('This customer is already in the database.');
+    }
+
     const customer = {
-      id: makeId('CUS', form.name),
-      name: form.name.trim(),
+      id: makeId('CUS', customerName),
+      name: customerName,
       type: form.type || 'Wholesale',
-      phone: form.phone.trim(),
-      city: form.city.trim(),
-      deliveryPreference: form.deliveryPreference.trim() || 'Auto transport',
-      creditLimit: numberValue(form.creditLimit, 50000),
+      phone: normalizeIndianMobile(form.phone),
+      city: form.city?.trim() || '',
+      state: form.state?.trim() || getCustomerStateForCity(form.city),
+      address: form.address?.trim() || '',
+      deliveryPreference: form.deliveryPreference?.trim() || 'Auto transport',
+      creditLimit,
       outstanding: 0,
     };
 
@@ -1505,9 +2596,22 @@ export function EnterpriseProvider({ children }) {
 
   function recordCustomerPayment(customerId, amount) {
     const payment = numberValue(amount);
+    const customer = data.customers.find((item) => item.id === customerId);
+
+    if (!customer) {
+      throw new Error('Select a customer before recording payment.');
+    }
 
     if (payment <= 0) {
       throw new Error('Payment amount must be greater than zero.');
+    }
+
+    if (payment > numberValue(customer.outstanding)) {
+      throw new Error(
+        `Payment amount cannot exceed ${customer.name}'s outstanding balance of ${roundMoney(
+          numberValue(customer.outstanding)
+        )}.`
+      );
     }
 
     setData((currentData) => ({
@@ -1661,7 +2765,8 @@ export function EnterpriseProvider({ children }) {
   }
 
   function createSalesOrder(form) {
-    const customer = data.customers.find((item) => item.id === form.customerId);
+    const customer =
+      data.customers.find((item) => item.id === form.customerId) || form.customerSnapshot;
     const kg = numberValue(form.kg);
     const pricePerKg = numberValue(form.pricePerKg);
     const shippingCharge = numberValue(form.shippingCharge);
@@ -1675,13 +2780,34 @@ export function EnterpriseProvider({ children }) {
       throw new Error('Sale kg and price must be greater than zero.');
     }
 
+    if (shippingCharge < 0) {
+      throw new Error('Shipping charge cannot be negative.');
+    }
+
     if (kg > item.remainingKg) {
       throw new Error('Sale quantity cannot exceed available stock.');
     }
 
     const itemName = form.itemType === 'raw' ? `${item.variety} ${item.grade}` : item.productName;
-    const revenue = roundMoney(kg * pricePerKg + shippingCharge);
+    const revenue = calculateSaleRevenue({ kg, pricePerKg, shippingCharge });
     const cogs = roundMoney(kg * getItemCostPerKg(form.itemType, item));
+    const paymentMode = form.paymentMode || 'Credit';
+    const paidAmount =
+      form.amountPaid === undefined
+        ? paymentMode === 'Credit'
+          ? 0
+          : revenue
+        : numberValue(form.amountPaid);
+
+    if (paidAmount < 0) {
+      throw new Error('Paid amount cannot be negative.');
+    }
+
+    if (paidAmount > revenue) {
+      throw new Error('Paid amount cannot exceed sale revenue.');
+    }
+
+    const balanceDue = roundMoney(revenue - paidAmount);
     const order = {
       id: makeId('SO', itemName),
       customerId: customer.id,
@@ -1698,12 +2824,16 @@ export function EnterpriseProvider({ children }) {
       orderDate: form.orderDate || today,
       status: 'Packed',
       saleType: form.saleType || customer.type,
+      paymentMode,
+      paidAmount: roundMoney(paidAmount),
+      balanceDue,
+      paymentStatus: balanceDue > 0 ? 'Due' : 'Paid',
     };
     const shipment = {
       id: makeId('SHIP', customer.name),
       orderId: order.id,
       customerName: customer.name,
-      destination: customer.city,
+      destination: customer.address || customer.city,
       transportMode: form.transportMode || customer.deliveryPreference,
       vehicleNo: '',
       status: 'Packed',
@@ -1713,51 +2843,69 @@ export function EnterpriseProvider({ children }) {
       note: form.note || '',
     };
 
-    setData((currentData) => ({
-      ...currentData,
-      rawLots:
-        form.itemType === 'raw'
-          ? currentData.rawLots.map((lot) =>
-              lot.id === item.id
+    setData((currentData) => {
+      const currentItem = getInventoryItem(currentData, form.itemType, form.itemId);
+
+      if (!currentItem || kg > numberValue(currentItem.remainingKg)) {
+        throw new Error('Sale quantity cannot exceed available stock.');
+      }
+
+      return {
+        ...currentData,
+        rawLots:
+          form.itemType === 'raw'
+            ? currentData.rawLots.map((lot) =>
+                lot.id === currentItem.id
+                  ? {
+                      ...lot,
+                      remainingKg: roundMoney(lot.remainingKg - kg),
+                      movements: [
+                        {
+                          id: makeId('MOV', lot.variety),
+                          type: 'Direct Sale',
+                          kg: -kg,
+                          note: `${order.id} sold to ${customer.name}`,
+                          date: order.orderDate,
+                        },
+                        ...lot.movements,
+                      ],
+                    }
+                  : lot
+              )
+            : currentData.rawLots,
+        blendBatches:
+          form.itemType === 'blend'
+            ? currentData.blendBatches.map((batch) =>
+                batch.id === currentItem.id
+                  ? {
+                      ...batch,
+                      remainingKg: roundMoney(batch.remainingKg - kg),
+                    }
+                  : batch
+              )
+            : currentData.blendBatches,
+        salesOrders: [order, ...currentData.salesOrders],
+        shipments: [shipment, ...currentData.shipments],
+        customers: currentData.customers.some(
+          (currentCustomer) => currentCustomer.id === customer.id
+        )
+          ? currentData.customers.map((currentCustomer) =>
+              currentCustomer.id === customer.id
                 ? {
-                    ...lot,
-                    remainingKg: roundMoney(lot.remainingKg - kg),
-                    movements: [
-                      {
-                        id: makeId('MOV', lot.variety),
-                        type: 'Direct Sale',
-                        kg: -kg,
-                        note: `${order.id} sold to ${customer.name}`,
-                        date: order.orderDate,
-                      },
-                      ...lot.movements,
-                    ],
+                    ...currentCustomer,
+                    outstanding: roundMoney(numberValue(currentCustomer.outstanding) + balanceDue),
                   }
-                : lot
+                : currentCustomer
             )
-          : currentData.rawLots,
-      blendBatches:
-        form.itemType === 'blend'
-          ? currentData.blendBatches.map((batch) =>
-              batch.id === item.id
-                ? {
-                    ...batch,
-                    remainingKg: roundMoney(batch.remainingKg - kg),
-                  }
-                : batch
-            )
-          : currentData.blendBatches,
-      salesOrders: [order, ...currentData.salesOrders],
-      shipments: [shipment, ...currentData.shipments],
-      customers: currentData.customers.map((currentCustomer) =>
-        currentCustomer.id === customer.id
-          ? {
-              ...currentCustomer,
-              outstanding: roundMoney(numberValue(currentCustomer.outstanding) + revenue),
-            }
-          : currentCustomer
-      ),
-    }));
+          : [
+              {
+                ...customer,
+                outstanding: balanceDue,
+              },
+              ...currentData.customers,
+            ],
+      };
+    });
 
     return order;
   }
@@ -1804,7 +2952,7 @@ export function EnterpriseProvider({ children }) {
   }
 
   const value = {
-    data,
+    data: dataWithCustomerStates,
     metrics,
     today,
     numberValue,

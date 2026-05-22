@@ -33,8 +33,7 @@ export default function ShippingPage() {
     requestConfirmation(
       {
         title: 'Update shipment status?',
-        description:
-          'This will update the fulfillment queue and the linked sales order status.',
+        description: 'This will update the fulfillment queue and the linked sales order status.',
         details: [
           { label: 'Customer', value: shipment.customerName },
           { label: 'Order', value: shipment.orderId },
@@ -122,6 +121,7 @@ export default function ShippingPage() {
           <label>
             <span>Shipment</span>
             <select
+              required
               value={form.shipmentId}
               onChange={(event) => updateForm('shipmentId', event.target.value)}
             >
@@ -147,6 +147,7 @@ export default function ShippingPage() {
           <label>
             <span>Transport mode</span>
             <input
+              maxLength="60"
               value={form.transportMode}
               onChange={(event) => updateForm('transportMode', event.target.value)}
             />
@@ -154,13 +155,20 @@ export default function ShippingPage() {
           <label>
             <span>Vehicle / LR number</span>
             <input
+              autoCapitalize="characters"
+              maxLength="24"
+              placeholder="Vehicle or LR number"
               value={form.vehicleNo}
               onChange={(event) => updateForm('vehicleNo', event.target.value)}
             />
           </label>
           <label>
             <span>Note</span>
-            <input value={form.note} onChange={(event) => updateForm('note', event.target.value)} />
+            <input
+              maxLength="120"
+              value={form.note}
+              onChange={(event) => updateForm('note', event.target.value)}
+            />
           </label>
           <button className="erp-button" type="submit">
             Update Delivery

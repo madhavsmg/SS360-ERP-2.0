@@ -7,7 +7,6 @@ export function numberValue(value, fallback = 0) {
   return Number.isFinite(parsedValue) ? parsedValue : fallback;
 }
 
-
 export function roundMoney(value) {
   return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 }

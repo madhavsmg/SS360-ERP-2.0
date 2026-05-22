@@ -4,7 +4,6 @@ import { PDFParse } from 'pdf-parse';
 
 import { parseTeaInvoiceText } from '../../../src/utils/teaInvoiceParser.js';
 
-
 export async function extractEmbeddedPdfDraft(invoiceRecord) {
   if (!isPdf(invoiceRecord)) {
     return null;
@@ -43,14 +42,12 @@ export async function extractEmbeddedPdfDraft(invoiceRecord) {
   }
 }
 
-
 function isPdf(invoiceRecord) {
   return (
     invoiceRecord.mimeType === 'application/pdf' ||
     invoiceRecord.originalFileName.toLowerCase().endsWith('.pdf')
   );
 }
-
 
 function hasUsableInvoiceText(rawText) {
   const text = String(rawText || '').trim();
@@ -63,7 +60,6 @@ function hasUsableInvoiceText(rawText) {
     )
   );
 }
-
 
 function buildTextPages(result, rawText) {
   const pages = Array.isArray(result.pages) && result.pages.length ? result.pages : [rawText];
@@ -86,7 +82,6 @@ function buildTextPages(result, rawText) {
     };
   });
 }
-
 
 function draftToInvoiceSummary(draft) {
   return {

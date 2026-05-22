@@ -6,8 +6,14 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
+    "syntax": "node ../scripts/check-js-syntax.js src prisma",
+    "lint": "npm run syntax",
+    "audit": "npm audit --audit-level=moderate",
+    "check": "npm run syntax && npm run prisma:validate && npm run audit",
     "prisma:generate": "prisma generate",
+    "prisma:validate": "prisma validate",
     "prisma:migrate": "prisma migrate dev --name init",
+    "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
