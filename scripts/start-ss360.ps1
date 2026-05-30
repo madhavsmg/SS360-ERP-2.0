@@ -222,7 +222,7 @@ function Start-OcrService {
   Start-LoggedProcess `
     -name "OCR service" `
     -filePath $python `
-    -arguments @("-m", "uvicorn", "main:app", "--reload", "--host", "127.0.0.1", "--port", "$OcrPort") `
+    -arguments @("-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "$OcrPort") `
     -workingDirectory $OcrRoot `
     -logName "ocr"
 
@@ -269,7 +269,7 @@ function Start-FrontendService {
 
 function Test-ErpRoutes {
   Write-Step "Smoke testing ERP routes"
-  $routes = @("/", "/suppliers", "/inventory", "/production", "/customers", "/sales", "/shipping", "/pos")
+  $routes = @("/", "/suppliers", "/inventory", "/inventory/intake", "/inventory/invoices", "/production", "/customers", "/sales", "/shipping")
 
   foreach ($route in $routes) {
     $url = "http://127.0.0.1:$FrontendPort$route"

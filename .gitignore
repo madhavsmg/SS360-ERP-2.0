@@ -4,6 +4,8 @@ node_modules/
 # Build output and tool caches
 dist/
 build/
+playwright-report/
+test-results/
 .vite/
 .vite-cache/
 .cache/
@@ -15,6 +17,7 @@ build/
 .env
 .env.*
 !.env.example
+!.env.e2e.example
 firebase-service-account.json
 config.local.*
 

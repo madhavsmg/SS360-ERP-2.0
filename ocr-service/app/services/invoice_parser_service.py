@@ -14,24 +14,7 @@ STOP_ITEM_REGEX = re.compile(
     re.I,
 )
 
-LAYOUT_KEYWORDS = (
-    "SHARON TEA AGENCY",
-    "SANJAY TEA EMPORIUM",
-    "SURYA TEA COMPANY",
-    "TEA TRIANGLE",
-    "TEA TRIANGLE PVT LTD",
-    "VAISHALI TEA CO",
-    "TAX INVOICE",
-    "PROFORMA INVOICE",
-    "GSTIN/UIN",
-    "HSN/SAC",
-    "OUTPUT IGST",
-    "CART & COOLIE CHARGES",
-)
-
-
 def parse_invoice_text(raw_text, lines=None, document_type=None):
-    text_lines = _clean_lines(raw_text)
     layout = _detect_layout(raw_text)
 
     if layout == "sharon":

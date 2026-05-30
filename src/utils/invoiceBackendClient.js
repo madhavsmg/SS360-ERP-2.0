@@ -3,13 +3,12 @@ import {
   createEmptyInvoiceCharge,
   createEmptyInvoiceLine,
 } from './invoiceExtraction';
-
+import { numberValue, roundMoney } from './erpNumbers';
 
 export const LOCAL_OCR_SERVICE_MESSAGE =
-  'Local OCR service is not running. Start it with: cd ocr-service && uvicorn main:app --reload --port 8001';
+  'Local OCR service is not running. Start it with: cd ocr-service && uvicorn main:app --port 8001';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
-
 
 export async function extractInvoiceWithBackend(file, onProgress = () => {}) {
   onProgress({ label: 'Uploading invoice to backend', progress: 0.08 });
@@ -40,7 +39,6 @@ export async function extractInvoiceWithBackend(file, onProgress = () => {}) {
   };
 }
 
-
 export async function approveBackendInvoice(invoiceId, draft) {
   return requestJson(`${API_BASE_URL}/api/invoices/${invoiceId}/approve`, {
     method: 'POST',
@@ -48,7 +46,6 @@ export async function approveBackendInvoice(invoiceId, draft) {
     body: JSON.stringify({ draft }),
   });
 }
-
 
 export function dataUrlToInvoiceFile(dataUrl, fileName) {
   const [header, data] = dataUrl.split(',');
@@ -63,7 +60,6 @@ export function dataUrlToInvoiceFile(dataUrl, fileName) {
   return new File([buffer], fileName, { type: mimeType });
 }
 
-
 async function uploadInvoice(file) {
   const form = new FormData();
   form.append('file', file);
@@ -75,7 +71,6 @@ async function uploadInvoice(file) {
 
   return response.invoice;
 }
-
 
 async function requestJson(url, options) {
   let response;
@@ -100,7 +95,6 @@ async function requestJson(url, options) {
 
   return payload;
 }
-
 
 function mapOcrExtractionToDraft(extraction, uploadedInvoice) {
   const invoice = extraction?.invoice || {};
@@ -160,7 +154,6 @@ function mapOcrExtractionToDraft(extraction, uploadedInvoice) {
   return draft;
 }
 
-
 function attachBackendInvoice(draft, uploadedInvoice) {
   return {
     ...draft,
@@ -172,7 +165,6 @@ function attachBackendInvoice(draft, uploadedInvoice) {
     },
   };
 }
-
 
 function mapOcrItemToDraftLine(item, taxAllocation) {
   const bagInfo = deriveBagInfo(item);
@@ -207,7 +199,6 @@ function mapOcrItemToDraftLine(item, taxAllocation) {
   };
 }
 
-
 function deriveBagInfo(item) {
   const rawText = [...(item.rawLines || []), item.description || ''].join(' ');
   const bagMatch = rawText.match(/(\d+(?:\.\d+)?)\s*(?:x|\*|X)\s*(\d+(?:\.\d+)?)/);
@@ -222,7 +213,6 @@ function deriveBagInfo(item) {
     breakdown: bags ? `${bags} x ${unitWeightKg}` : '',
   };
 }
-
 
 function buildTaxAllocation(items, taxes, totals) {
   const taxableTotal = sumAmounts(items.map((item) => ({ amount: item.amount })));
@@ -247,13 +237,15 @@ function buildTaxAllocation(items, taxes, totals) {
       igstRate: igstTotal && amount ? roundMoney((igstAmount / amount) * 100) : 0,
       cgstRate: cgstTotal && amount ? roundMoney((cgstAmount / amount) * 100) : 0,
       sgstRate: sgstTotal && amount ? roundMoney((sgstAmount / amount) * 100) : 0,
-      gstRate: totalTax && amount ? roundMoney(((igstAmount + cgstAmount + sgstAmount) / amount) * 100) : 0,
+      gstRate:
+        totalTax && amount
+          ? roundMoney(((igstAmount + cgstAmount + sgstAmount) / amount) * 100)
+          : 0,
     };
   }
 
   return { byLineNo, igstTotal, cgstTotal, sgstTotal, totalTax };
 }
-
 
 function sumMatchingTaxes(taxes, pattern) {
   return roundMoney(
@@ -263,16 +255,13 @@ function sumMatchingTaxes(taxes, pattern) {
   );
 }
 
-
 function sumAmounts(values) {
   return roundMoney((values || []).reduce((total, item) => total + numberValue(item.amount), 0));
 }
 
-
 function inferSourceType(sourceName = '') {
   return sourceName.toLowerCase().endsWith('.pdf') ? 'PDF' : 'Image';
 }
-
 
 function cleanTeaName(value) {
   return String(value || '')
@@ -282,7 +271,6 @@ function cleanTeaName(value) {
     .trim();
 }
 
-
 function categorizeCharge(label = '') {
   if (/cart|coolie/i.test(label)) return 'Cart & Coolie';
   if (/transport|freight/i.test(label)) return 'Transport';
@@ -290,23 +278,7 @@ function categorizeCharge(label = '') {
   return 'Miscellaneous';
 }
 
-
 function valueOrBlank(value) {
   const parsedValue = numberValue(value, null);
   return parsedValue === null || parsedValue === 0 ? '' : String(roundMoney(parsedValue));
-}
-
-
-function numberValue(value, fallback = 0) {
-  if (value === null || value === undefined || String(value).trim() === '') {
-    return fallback;
-  }
-
-  const parsedValue = Number(value);
-  return Number.isFinite(parsedValue) ? parsedValue : fallback;
-}
-
-
-function roundMoney(value) {
-  return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 }

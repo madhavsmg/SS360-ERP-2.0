@@ -3,58 +3,7 @@ import { Printer, QrCode as QrCodeIcon, Search } from 'lucide-react';
 import QRCode from 'qrcode';
 import { useEnterprise } from '../../context/EnterpriseContext';
 import { formatKg, formatMoney } from '../../utils/formatters';
-
-function getQrPayload(type, item, options = {}) {
-  if (type === 'raw') {
-    return JSON.stringify({
-      app: 'SS-360',
-      module: 'inventory',
-      type: 'raw-tea-stock',
-      lotId: item.id,
-      bagSizeKg: options.bagSizeKg,
-      bagId: options.bagId || '',
-      variety: item.variety,
-      grade: item.grade,
-      supplier: item.supplierName,
-      remainingKg: item.remainingKg,
-      costPerKg: item.costPerKg,
-    });
-  }
-
-  return (
-    item.qrPayload ||
-    JSON.stringify({
-      app: 'SS-360',
-      module: 'inventory',
-      type: 'finished-blend-batch',
-      batchId: item.id,
-      productName: item.productName,
-      sku: item.sku,
-      remainingKg: item.remainingKg,
-      costPerKg: item.costPerKg,
-      sellingPricePerKg: item.sellingPricePerKg,
-    })
-  );
-}
-
-function readQrValue(value) {
-  const trimmedValue = value.trim();
-
-  if (!trimmedValue) {
-    return {};
-  }
-
-  try {
-    const parsed = JSON.parse(trimmedValue);
-    return parsed;
-  } catch {
-    return { id: trimmedValue };
-  }
-}
-
-function getBagOptionLabel(option) {
-  return `${option.remainingBagCount} bag(s) x ${option.bagSizeKg} kg`;
-}
+import { buildStockQrPayload, getBagOptionLabel, readQrValue } from '../../utils/qrPayloads';
 
 export default function InventoryStock() {
   const { data, metrics, getRawLotBagOptions } = useEnterprise();
@@ -94,10 +43,7 @@ export default function InventoryStock() {
   }, [activeRawLots, normalizedSearch]);
   const blendBatches = useMemo(() => {
     return data.blendBatches.filter((batch) =>
-      [batch.id, batch.productName, batch.sku]
-        .join(' ')
-        .toLowerCase()
-        .includes(normalizedSearch)
+      [batch.id, batch.productName, batch.sku].join(' ').toLowerCase().includes(normalizedSearch)
     );
   }, [data.blendBatches, normalizedSearch]);
   const selectedQrKey =
@@ -108,42 +54,31 @@ export default function InventoryStock() {
   useEffect(() => {
     let mounted = true;
 
-    async function buildQrCodes() {
-      const nextImages = {};
-      const targets = [
-        ...activeRawLots.flatMap((lot) =>
-          getRawLotBagOptions(lot).map((option) => ({
-            key: `raw:${lot.id}:${option.bagSizeKg}`,
-            payload: getQrPayload('raw', lot, { bagSizeKg: option.bagSizeKg }),
-          }))
-        ),
-        ...data.blendBatches.map((batch) => ({
-          key: `blend:${batch.id}`,
-          payload: getQrPayload('blend', batch),
-        })),
-      ];
+    async function buildSelectedQrCode() {
+      if (!selectedItem || !selectedQrKey || qrImages[selectedQrKey]) {
+        return;
+      }
 
-      await Promise.all(
-        targets.map(async (target) => {
-          nextImages[target.key] = await QRCode.toDataURL(target.payload, {
-            errorCorrectionLevel: 'M',
-            margin: 2,
-            width: 220,
-          });
-        })
-      );
+      const payload = buildStockQrPayload(selectedLabel.type, selectedItem, {
+        bagSizeKg: selectedBagSize,
+      });
+      const image = await QRCode.toDataURL(payload, {
+        errorCorrectionLevel: 'M',
+        margin: 2,
+        width: 220,
+      });
 
       if (mounted) {
-        setQrImages(nextImages);
+        setQrImages((currentImages) => ({ ...currentImages, [selectedQrKey]: image }));
       }
     }
 
-    buildQrCodes();
+    buildSelectedQrCode();
 
     return () => {
       mounted = false;
     };
-  }, [activeRawLots, data.blendBatches, getRawLotBagOptions]);
+  }, [qrImages, selectedBagSize, selectedItem, selectedLabel.type, selectedQrKey]);
 
   useEffect(() => {
     if (selectedItem) {
@@ -204,35 +139,43 @@ export default function InventoryStock() {
       return;
     }
 
-    setMessage('No active raw lot or finished batch matched that QR value.');
+    setMessage('No active raw lot or blended batch matched that QR value.');
   }
 
   return (
-    <>
+    <div data-testid="inventory-stock-workspace">
       <div className="erp-summary-grid">
-        <div className="erp-stat">
+        <div className="erp-stat erp-kpi-stat stat-raw-stock">
           <span>Raw Stock</span>
           <strong>{formatKg(metrics.rawKg)}</strong>
           <small>{formatMoney(metrics.rawValue)} active value</small>
         </div>
-        <div className="erp-stat">
-          <span>Finished Stock</span>
+        <div className="erp-stat erp-kpi-stat stat-blended-stock">
+          <span>Blended Stock</span>
           <strong>{formatKg(metrics.finishedKg)}</strong>
           <small>{formatMoney(metrics.finishedValue)} batch value</small>
         </div>
-        <div className="erp-stat">
+        <div
+          className={`erp-stat erp-kpi-stat ${
+            metrics.lowRawLots > 0 ? 'stat-low-stock' : 'stat-approved'
+          }`}
+        >
           <span>Low Stock</span>
           <strong>{metrics.lowRawLots}</strong>
           <small>raw lots below reorder level</small>
         </div>
-        <div className="erp-stat">
+        <div className="erp-stat erp-kpi-stat stat-inventory-value">
           <span>Total Inventory</span>
           <strong>{formatMoney(metrics.rawValue + metrics.finishedValue)}</strong>
           <small>stock value on hand</small>
         </div>
       </div>
 
-      {message && <p className="erp-message">{message}</p>}
+      {message && (
+        <p className="erp-message" data-testid="inventory-stock-message">
+          {message}
+        </p>
+      )}
 
       <div className="erp-workspace inventory-stock-workspace">
         <section className="erp-panel">
@@ -246,6 +189,7 @@ export default function InventoryStock() {
               <div className="erp-input-icon">
                 <Search size={16} />
                 <input
+                  data-testid="inventory-stock-search-input"
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                   placeholder="Lot, product, supplier, QR ID"
@@ -257,6 +201,7 @@ export default function InventoryStock() {
           <div className="erp-tabs" role="tablist" aria-label="Stock type">
             <button
               className={stockMode === 'raw' ? 'erp-tab active' : 'erp-tab'}
+              data-testid="inventory-tab-raw"
               type="button"
               onClick={() => setStockMode('raw')}
             >
@@ -264,15 +209,16 @@ export default function InventoryStock() {
             </button>
             <button
               className={stockMode === 'blend' ? 'erp-tab active' : 'erp-tab'}
+              data-testid="inventory-tab-blend"
               type="button"
               onClick={() => setStockMode('blend')}
             >
-              Finished Batches
+              Blended Batches
             </button>
           </div>
 
           {stockMode === 'raw' ? (
-            <div className="erp-table table-inventory">
+            <div className="erp-table table-inventory" data-testid="inventory-raw-table">
               <div className="erp-row head">
                 <span>Raw Lot</span>
                 <span>Stock</span>
@@ -283,6 +229,7 @@ export default function InventoryStock() {
               {rawLots.map((lot) => (
                 <button
                   className="erp-row"
+                  data-testid={`inventory-raw-row-${lot.id}`}
                   key={lot.id}
                   type="button"
                   onClick={() => selectLabel('raw', lot.id)}
@@ -310,9 +257,9 @@ export default function InventoryStock() {
               {rawLots.length === 0 && <p className="erp-empty-state">No raw lots match.</p>}
             </div>
           ) : (
-            <div className="erp-table table-inventory">
+            <div className="erp-table table-inventory" data-testid="inventory-blend-table">
               <div className="erp-row head">
-                <span>Finished Batch</span>
+                <span>Blended Batch</span>
                 <span>Stock</span>
                 <span>Cost/kg</span>
                 <span>Sell/kg</span>
@@ -321,6 +268,7 @@ export default function InventoryStock() {
               {blendBatches.map((batch) => (
                 <button
                   className="erp-row"
+                  data-testid={`inventory-blend-row-${batch.id}`}
                   key={batch.id}
                   type="button"
                   onClick={() => selectLabel('blend', batch.id)}
@@ -339,7 +287,9 @@ export default function InventoryStock() {
                   </span>
                 </button>
               ))}
-              {blendBatches.length === 0 && <p className="erp-empty-state">No batches match.</p>}
+              {blendBatches.length === 0 && (
+                <p className="erp-empty-state">No blended batches match.</p>
+              )}
             </div>
           )}
         </section>
@@ -347,7 +297,12 @@ export default function InventoryStock() {
         <aside className="erp-panel erp-print-label">
           <div className="erp-panel-title">
             <h2>Selected QR</h2>
-            <button className="erp-button secondary" type="button" onClick={() => window.print()}>
+            <button
+              className="erp-button secondary"
+              data-testid="inventory-print-qr-button"
+              type="button"
+              onClick={() => window.print()}
+            >
               <Printer size={17} />
               Print
             </button>
@@ -374,12 +329,9 @@ export default function InventoryStock() {
                   </select>
                 </label>
               )}
-              <div className="erp-qr-box">
+              <div className="erp-qr-box" data-testid="inventory-selected-qr">
                 {qrImages[selectedQrKey] ? (
-                  <img
-                    src={qrImages[selectedQrKey]}
-                    alt={`QR for ${selectedItem.id}`}
-                  />
+                  <img src={qrImages[selectedQrKey]} alt={`QR for ${selectedItem.id}`} />
                 ) : (
                   <span>Generating QR</span>
                 )}
@@ -446,17 +398,22 @@ export default function InventoryStock() {
             <label>
               <span>Paste QR payload or item ID</span>
               <textarea
+                data-testid="inventory-qr-lookup-input"
                 rows="4"
                 value={lookupText}
                 onChange={(event) => setLookupText(event.target.value)}
               />
             </label>
-            <button className="erp-button secondary" type="submit">
+            <button
+              className="erp-button secondary"
+              data-testid="inventory-qr-match-button"
+              type="submit"
+            >
               Match QR
             </button>
           </form>
         </aside>
       </div>
-    </>
+    </div>
   );
 }

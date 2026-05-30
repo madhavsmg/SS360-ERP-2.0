@@ -5,12 +5,25 @@ import { prisma } from '../config/prisma.js';
 import { extractInvoiceFile } from '../services/ocrClient.service.js';
 import { extractEmbeddedPdfDraft } from '../services/embeddedPdf.service.js';
 import { approveInvoiceDraft } from '../services/invoiceApproval.service.js';
-
+import { validateUploadSignature } from '../utils/fileSignature.utils.js';
 
 export async function uploadInvoice(request, response, next) {
   try {
     if (!request.file) {
       response.status(400).json({ success: false, message: 'Upload an invoice file named file.' });
+      return;
+    }
+
+    const signatureIsValid = await validateUploadSignature(
+      request.file.path,
+      request.file.mimetype
+    );
+    if (!signatureIsValid) {
+      await fs.promises.unlink(request.file.path).catch(() => {});
+      response.status(400).json({
+        success: false,
+        message: 'The uploaded file content does not match a supported PDF or image invoice.',
+      });
       return;
     }
 
@@ -25,12 +38,11 @@ export async function uploadInvoice(request, response, next) {
       },
     });
 
-    response.status(201).json({ success: true, invoice });
+    response.status(201).json({ success: true, invoice: toPublicInvoice(invoice) });
   } catch (error) {
     next(error);
   }
 }
-
 
 export async function extractInvoice(request, response, next) {
   try {
@@ -69,7 +81,7 @@ export async function extractInvoice(request, response, next) {
 
       response.json({
         success: true,
-        invoice: updatedInvoice,
+        invoice: toPublicInvoice(updatedInvoice),
         extraction,
       });
     } catch (error) {
@@ -83,7 +95,7 @@ export async function extractInvoice(request, response, next) {
           success: false,
           code: 'OCR_UNAVAILABLE',
           message:
-            'Local OCR service is not running. Start it with: cd ocr-service && uvicorn main:app --reload --port 8001',
+            'Local OCR service is not running. Start it with: cd ocr-service && uvicorn main:app --port 8001',
         });
         return;
       }
@@ -95,7 +107,6 @@ export async function extractInvoice(request, response, next) {
   }
 }
 
-
 export async function approveInvoice(request, response, next) {
   try {
     const invoice = await prisma.invoice.findUnique({ where: { id: request.params.id } });
@@ -104,21 +115,27 @@ export async function approveInvoice(request, response, next) {
       return;
     }
 
-    if (invoice.status === 'APPROVED') {
-      response.status(409).json({ success: false, message: 'This invoice is already approved.' });
-      return;
-    }
-
     const draft = request.body?.draft || request.body;
     const approval = await approveInvoiceDraft(invoice, draft);
 
     response.json({
       success: true,
-      invoice: approval.invoice,
+      alreadyApproved: approval.alreadyApproved || false,
+      invoice: toPublicInvoice(approval.invoice),
       rawLots: approval.rawLots,
       supplier: approval.supplier,
     });
   } catch (error) {
     next(error);
   }
+}
+
+function toPublicInvoice(invoice) {
+  if (!invoice) {
+    return invoice;
+  }
+
+  const publicInvoice = { ...invoice };
+  delete publicInvoice.filePath;
+  return publicInvoice;
 }

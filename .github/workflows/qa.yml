@@ -1,0 +1,59 @@
+name: QA Regression
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+concurrency:
+  group: qa-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qa:
+    name: QA checks and Playwright regression
+    runs-on: ubuntu-latest
+    environment: qa
+    env:
+      PLAYWRIGHT_BASE_URL: http://127.0.0.1:5174
+      PLAYWRIGHT_QA_BASE_URL: http://127.0.0.1:5174
+      PLAYWRIGHT_SKIP_WEBSERVER: '0'
+      E2E_ENV: qa
+      E2E_REQUIRE_DATABASE: '0'
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ss360_erp_ci?schema=public
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: npm --prefix backend ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run existing quality gate
+        run: npm run check
+
+      - name: Run QA Playwright regression
+        run: npm run test:e2e:qa:ci
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-playwright-report
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore

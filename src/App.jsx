@@ -7,9 +7,8 @@ import InventoryPage from './modules/Inventory/inventoryPage';
 import ProductionPage from './modules/Production/productionPage';
 import SalesPage from './modules/Sales/salesPage';
 import ShippingPage from './modules/Shipping/shippingPage';
-import POSPage from './modules/POS/posPage';
 import Sidebar from './components/sidebar';
-import './modules/ERP/erp.css';
+import './styles/erp.css';
 
 function App() {
   return (
@@ -26,7 +25,6 @@ function App() {
               <Route path="/production" element={<ProductionPage />} />
               <Route path="/sales" element={<SalesPage />} />
               <Route path="/shipping" element={<ShippingPage />} />
-              <Route path="/pos" element={<POSPage />} />
             </Routes>
           </main>
         </div>

@@ -7,31 +7,37 @@
     BlinkMacSystemFont,
     'Segoe UI',
     sans-serif;
-  color: #18211b;
-  background: #eef2ef;
+  color: #1f2b1f;
+  background: #f8f0df;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --app-bg: #eef2ef;
-  --surface: #ffffff;
-  --surface-soft: #f7faf8;
-  --surface-muted: #eef4f0;
-  --line: #dce4df;
-  --line-strong: #c4d1c9;
-  --text: #18211b;
-  --muted: #607067;
-  --muted-strong: #425149;
-  --brand: #1f6a43;
-  --brand-dark: #16472f;
-  --brand-soft: #e6f4ec;
-  --gold: #a66a13;
-  --gold-soft: #fff3d8;
-  --danger: #a43b30;
-  --danger-soft: #fae6e2;
-  --shadow: 0 18px 45px rgba(31, 54, 40, 0.08);
-  --sidebar-width: 208px;
+  --app-bg: #f8f0df;
+  --surface: #fffaf0;
+  --surface-soft: #fff5e4;
+  --surface-muted: #e9f1df;
+  --surface-glass: rgba(255, 250, 240, 0.9);
+  --line: #ddceb8;
+  --line-strong: #bba884;
+  --text: #1f2b1f;
+  --muted: #6c705f;
+  --muted-strong: #414c37;
+  --brand: #3d6f35;
+  --brand-dark: #1f4328;
+  --brand-soft: #e5efd8;
+  --gold: #bd7b19;
+  --gold-soft: #fff0cf;
+  --coral: #c96342;
+  --coral-soft: #ffe8dc;
+  --teal: #2c7770;
+  --teal-soft: #dff0ec;
+  --danger: #9a3b32;
+  --danger-soft: #fae4dd;
+  --shadow: 0 18px 48px rgba(52, 43, 28, 0.12);
+  --shadow-soft: 0 10px 24px rgba(52, 43, 28, 0.08);
+  --topbar-height: 76px;
 }
 
 * {
@@ -39,6 +45,8 @@
 }
 
 html {
+  min-width: 320px;
+  min-height: 100%;
   background: var(--app-bg);
 }
 
@@ -46,9 +54,8 @@ body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(238, 242, 239, 0.96)),
-    radial-gradient(circle at top right, rgba(31, 106, 67, 0.12), transparent 32rem);
+  background: var(--app-bg);
+  color: var(--text);
 }
 
 button,
@@ -72,158 +79,181 @@ a {
 }
 
 .app-shell {
-  display: flex;
+  position: relative;
+  isolation: isolate;
+  display: block;
   min-height: 100vh;
+}
+
+.app-shell::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  pointer-events: none;
+  background-image: url('/abstract-flat-background-img.jpg');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  opacity: 1;
+}
+
+.app-shell::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background: rgba(255, 248, 235, 0.18);
 }
 
 .app-sidebar {
   position: sticky;
   top: 0;
-  display: flex;
-  width: var(--sidebar-width);
-  height: 100vh;
-  flex: 0 0 var(--sidebar-width);
-  flex-direction: column;
-  border-right: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.96);
-  padding: 16px 12px;
-  box-shadow: 12px 0 34px rgba(30, 47, 37, 0.05);
+  z-index: 30;
+  display: grid;
+  grid-template-columns: minmax(210px, auto) minmax(0, 1fr) auto;
+  min-height: var(--topbar-height);
+  align-items: center;
+  gap: 18px;
+  border-bottom: 1px solid rgba(187, 168, 132, 0.62);
+  background: rgba(255, 250, 240, 0.9);
+  padding: 12px clamp(16px, 2vw, 30px);
+  box-shadow: 0 10px 34px rgba(52, 43, 28, 0.1);
+  backdrop-filter: blur(18px);
 }
 
 .app-brand {
   display: flex;
+  min-width: 0;
   align-items: center;
-  gap: 9px;
-  min-height: 54px;
-  border-bottom: 1px solid var(--line);
-  padding: 0 4px 14px;
+  gap: 11px;
 }
 
 .app-brand-mark {
-  display: grid;
-  width: 38px;
-  height: 38px;
-  place-items: center;
+  display: block;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  border: 1px solid rgba(61, 111, 53, 0.22);
   border-radius: 999px;
   background: transparent;
-  color: #ffffff;
-  font-weight: 850;
-  overflow: hidden;
-}
-
-.app-brand-mark img {
-  width: 100%;
-  height: 100%;
+  box-shadow: 0 8px 20px rgba(61, 111, 53, 0.16);
   object-fit: cover;
 }
 
 .app-brand strong,
 .app-brand span {
   display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .app-brand strong {
   color: var(--text);
   font-size: 1rem;
+  font-weight: 860;
 }
 
 .app-brand span {
+  margin-top: 2px;
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: 0.74rem;
+  font-weight: 680;
 }
 
 .app-nav {
-  display: grid;
-  gap: 5px;
-  padding-top: 16px;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .app-nav-link {
-  display: flex;
+  position: relative;
+  display: inline-flex;
+  min-height: 42px;
+  flex: 0 0 auto;
   align-items: center;
-  gap: 9px;
-  min-height: 40px;
-  border-radius: 9px;
-  padding: 8px 9px;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 8px 12px;
   color: var(--muted-strong);
-  font-size: 0.9rem;
-  font-weight: 720;
+  font-size: 0.86rem;
+  font-weight: 760;
   transition:
     background 0.16s ease,
+    border-color 0.16s ease,
     color 0.16s ease,
+    box-shadow 0.16s ease,
     transform 0.16s ease;
 }
 
 .app-nav-link:hover {
-  background: var(--surface-muted);
+  border-color: rgba(61, 111, 53, 0.22);
+  background: rgba(229, 239, 216, 0.86);
   color: var(--brand-dark);
 }
 
 .app-nav-link.active {
+  border-color: rgba(61, 111, 53, 0.32);
   background: var(--brand-soft);
   color: var(--brand-dark);
-  box-shadow: inset 3px 0 0 var(--brand);
+  box-shadow: inset 0 -2px 0 rgba(61, 111, 53, 0.38);
 }
 
 .app-sidebar-footer {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  margin-top: auto;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 9px;
-  background: var(--surface-soft);
-  color: var(--muted);
+  min-height: 40px;
+  border: 1px solid rgba(187, 168, 132, 0.76);
+  border-radius: 999px;
+  padding: 8px 11px;
+  background: rgba(255, 245, 228, 0.86);
+  color: var(--muted-strong);
   font-size: 0.76rem;
-  font-weight: 650;
+  font-weight: 780;
+  white-space: nowrap;
 }
 
 .app-sidebar-footer-icon {
-  width: 18px;
-  height: 18px;
-  display: block;
+  width: 20px;
+  height: 20px;
+  color: var(--brand);
 }
 
 .app-main {
   position: relative;
   z-index: 1;
-  width: calc(100% - var(--sidebar-width));
-  flex: 1;
-  padding: 22px;
-  overflow: hidden;
-}
-
-.app-main::before {
-  content: '';
-  position: fixed;
-  z-index: 0;
-  top: 0;
-  left: var(--sidebar-width);
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  background-image: url('/abstract-flat-background-img.jpg');
-  background-position: top right;
-  background-repeat: no-repeat;
-  background-size: cover;
+  width: 100%;
+  min-height: calc(100vh - var(--topbar-height));
+  padding: clamp(16px, 2vw, 28px);
 }
 
 .app-main::after {
   content: '';
   position: fixed;
-  z-index: 0;
-  top: 0;
-  left: var(--sidebar-width);
-  right: 0;
-  bottom: 0;
+  z-index: -1;
+  inset: var(--topbar-height) 0 0;
   pointer-events: none;
   background-image: url('/circle%20logo%20ss%20tea.png');
   background-position: center;
   background-repeat: no-repeat;
-  background-size: clamp(180px, 22vw, 320px);
-  opacity: 0.05;
-  filter: grayscale(1) contrast(1.2);
+  background-size: clamp(250px, 25vw, 380px);
+  opacity: 0.34;
 }
 
 .app-main > * {
@@ -231,47 +261,48 @@ a {
   z-index: 1;
 }
 
-@media (max-width: 900px) {
-  .app-shell {
-    display: block;
-  }
-
+@media (max-width: 1180px) {
   .app-sidebar {
-    position: static;
-    width: 100%;
-    height: auto;
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
-  }
-
-  .app-nav {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  .app-nav-link {
-    justify-content: center;
-  }
-
-  .app-nav-link span {
-    display: none;
+    grid-template-columns: minmax(190px, auto) minmax(0, 1fr);
   }
 
   .app-sidebar-footer {
     display: none;
   }
 
+  .app-nav {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 760px) {
+  :root {
+    --topbar-height: 112px;
+  }
+
+  .app-sidebar {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    align-items: stretch;
+    padding: 12px;
+  }
+
+  .app-brand {
+    justify-content: center;
+  }
+
+  .app-nav {
+    justify-content: flex-start;
+    padding-bottom: 2px;
+  }
+
+  .app-nav-link {
+    min-height: 38px;
+    padding: 7px 10px;
+    font-size: 0.8rem;
+  }
+
   .app-main {
-    width: 100%;
-    padding: 14px;
-  }
-
-  .app-main::before,
-  .app-main::after {
-    left: 0;
-    right: 0;
-  }
-
-  .app-main::before {
-    background-size: cover;
+    padding: 12px;
   }
 }

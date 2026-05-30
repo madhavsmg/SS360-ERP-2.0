@@ -9,34 +9,43 @@ export default function DashboardPage() {
   const pendingShipments = data.shipments.filter((shipment) => shipment.status !== 'Delivered');
 
   return (
-    <section className="erp-page dashboard-module">
+    <section className="erp-page dashboard-module" data-testid="page-dashboard">
       <header className="erp-header">
         <div>
           <h1>Siva Sai Tea ERP</h1>
           <p>
-            Supplier ledger, invoice intake, raw stock, blending, sales, shipping, and profit stay connected
-            from one dashboard.
+            Supplier ledger, invoice intake, raw stock, blending, sales, shipping, and profit stay
+            connected from one dashboard.
           </p>
         </div>
       </header>
 
-      <div className="erp-summary-grid">
-        <div className="erp-stat">
+      <div className="erp-summary-grid dashboard-summary-grid">
+        <div className="erp-stat dashboard-stat raw-stock" data-testid="dashboard-kpi-raw-stock">
           <span>Raw Tea Stock</span>
           <strong>{formatKg(metrics.rawKg)}</strong>
           <small>{formatMoney(metrics.rawValue)} at cost</small>
         </div>
-        <div className="erp-stat">
-          <span>Finished Products</span>
+        <div
+          className="erp-stat dashboard-stat blended-stock"
+          data-testid="dashboard-kpi-blended-stock"
+        >
+          <span>Blended Batches</span>
           <strong>{formatKg(metrics.finishedKg)}</strong>
           <small>{formatMoney(metrics.finishedValue)} at cost</small>
         </div>
-        <div className="erp-stat">
+        <div
+          className="erp-stat dashboard-stat sales-revenue"
+          data-testid="dashboard-kpi-sales-revenue"
+        >
           <span>Sales Revenue</span>
           <strong>{formatMoney(metrics.salesRevenue)}</strong>
           <small>{formatMoney(metrics.salesProfit)} profit</small>
         </div>
-        <div className="erp-stat">
+        <div
+          className="erp-stat dashboard-stat open-shipments"
+          data-testid="dashboard-kpi-open-shipments"
+        >
           <span>Open Shipments</span>
           <strong>{metrics.openShipments}</strong>
           <small>{metrics.lowRawLots} low-stock raw lots</small>

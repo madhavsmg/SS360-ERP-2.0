@@ -2,6 +2,15 @@ import { useMemo, useState } from 'react';
 import { HandCoins } from 'lucide-react';
 import { useConfirmationDialog } from '../../components/ConfirmationDialog';
 import { useEnterprise } from '../../context/EnterpriseContext';
+import {
+  formatPaymentTerms,
+  sanitizeGstinInput,
+  sanitizeIndianMobileInput,
+  sanitizePaymentTermDays,
+  validateOptionalGstin,
+  validateOptionalIndianMobile,
+  validatePaymentTermDays,
+} from '../../utils/businessValidation';
 import { formatKg, formatMoney } from '../../utils/formatters';
 
 const supplierFormDefaults = {
@@ -9,7 +18,7 @@ const supplierFormDefaults = {
   agentName: '',
   phone: '',
   region: '',
-  paymentTerms: '7 days',
+  paymentTerms: '7',
   gstin: '',
   address: '',
 };
@@ -84,7 +93,21 @@ export default function SuppliersPage() {
     selectedSupplierHasDue && paymentAmount > 0 && !paymentExceedsOutstanding;
 
   function updateSupplierForm(field, value) {
-    setSupplierForm((currentForm) => ({ ...currentForm, [field]: value }));
+    let nextValue = value;
+
+    if (field === 'phone') {
+      nextValue = sanitizeIndianMobileInput(value);
+    }
+
+    if (field === 'paymentTerms') {
+      nextValue = sanitizePaymentTermDays(value);
+    }
+
+    if (field === 'gstin') {
+      nextValue = sanitizeGstinInput(value);
+    }
+
+    setSupplierForm((currentForm) => ({ ...currentForm, [field]: nextValue }));
   }
 
   function updatePayment(field, value) {
@@ -120,6 +143,15 @@ export default function SuppliersPage() {
       return;
     }
 
+    const phoneError = validateOptionalIndianMobile(supplierForm.phone, 'Supplier phone');
+    const termsError = validatePaymentTermDays(supplierForm.paymentTerms);
+    const gstinError = validateOptionalGstin(supplierForm.gstin, 'Supplier GSTIN');
+
+    if (phoneError || termsError || gstinError) {
+      setMessage(phoneError || termsError || gstinError);
+      return;
+    }
+
     requestConfirmation(
       {
         title: 'Add supplier to ledger?',
@@ -128,7 +160,7 @@ export default function SuppliersPage() {
         details: [
           { label: 'Supplier', value: supplierForm.name.trim() },
           { label: 'Region', value: supplierForm.region || 'Not set' },
-          { label: 'Terms', value: supplierForm.paymentTerms || '7 days' },
+          { label: 'Terms', value: formatPaymentTerms(supplierForm.paymentTerms) },
         ],
         confirmLabel: 'Add Supplier',
       },
@@ -177,11 +209,15 @@ export default function SuppliersPage() {
       return;
     }
 
+    if (!payment.paymentDate || payment.paymentDate > today) {
+      setMessage('Payment date is required and cannot be in the future.');
+      return;
+    }
+
     requestConfirmation(
       {
         title: 'Record supplier payment?',
-        description:
-          'This will post a payment entry and reduce the supplier outstanding balance.',
+        description: 'This will post a payment entry and reduce the supplier outstanding balance.',
         details: [
           { label: 'Supplier', value: supplier.name },
           { label: 'Outstanding', value: formatMoney(supplierOutstanding) },
@@ -212,7 +248,7 @@ export default function SuppliersPage() {
   }
 
   return (
-    <section className="erp-page supplier-module">
+    <section className="erp-page supplier-module" data-testid="page-suppliers">
       <header className="erp-header">
         <div>
           <span className="erp-kicker">Suppliers</span>
@@ -225,29 +261,37 @@ export default function SuppliersPage() {
       </header>
 
       <div className="erp-summary-grid">
-        <div className="erp-stat">
+        <div className="erp-stat erp-kpi-stat stat-master-records">
           <span>Total Suppliers</span>
           <strong>{supplierStats.supplierCount}</strong>
           <small>vendors in the ledger</small>
         </div>
-        <div className="erp-stat">
+        <div
+          className={`erp-stat erp-kpi-stat ${
+            supplierStats.totalOutstanding > 0 ? 'stat-payable-risk' : 'stat-approved'
+          }`}
+        >
           <span>Outstanding</span>
           <strong>{formatMoney(supplierStats.totalOutstanding)}</strong>
           <small>{supplierStats.suppliersWithBalance} suppliers with balance</small>
         </div>
-        <div className="erp-stat">
+        <div className="erp-stat erp-kpi-stat stat-cashflow">
           <span>Payments Posted</span>
           <strong>{formatMoney(supplierStats.totalPayments)}</strong>
           <small>{(data.supplierPayments || []).length} payment entries</small>
         </div>
-        <div className="erp-stat">
+        <div className="erp-stat erp-kpi-stat stat-stock-link">
           <span>Active Lots</span>
           <strong>{data.rawLots.length}</strong>
           <small>linked to supplier stock history</small>
         </div>
       </div>
 
-      {message && <p className="erp-message">{message}</p>}
+      {message && (
+        <p className="erp-message" data-testid="supplier-message">
+          {message}
+        </p>
+      )}
 
       <div className="erp-workspace supplier-workspace">
         <div className="supplier-main-column">
@@ -255,7 +299,7 @@ export default function SuppliersPage() {
             <div className="erp-panel-title">
               <h2>Supplier Ledger</h2>
             </div>
-            <div className="erp-table table-supplier-ledger">
+            <div className="erp-table table-supplier-ledger" data-testid="supplier-ledger">
               <div className="erp-row head">
                 <span>Supplier</span>
                 <span>Region</span>
@@ -267,6 +311,7 @@ export default function SuppliersPage() {
               {supplierLedger.map(({ supplier, suppliedKg, lastLot, lastPayment }) => (
                 <button
                   className="erp-row"
+                  data-testid={`supplier-ledger-row-${supplier.id}`}
                   key={supplier.id}
                   type="button"
                   onClick={() => updatePayment('supplierId', supplier.id)}
@@ -341,13 +386,17 @@ export default function SuppliersPage() {
         </div>
 
         <aside className="supplier-action-stack">
-          <form className="erp-panel" onSubmit={submitSupplier}>
+          <form className="erp-panel" data-testid="supplier-add-form" onSubmit={submitSupplier}>
             <div className="erp-panel-title">
               <h2>Add Supplier</h2>
             </div>
             <label>
               <span>Supplier name</span>
               <input
+                autoComplete="organization"
+                data-testid="supplier-name-input"
+                maxLength="80"
+                required
                 value={supplierForm.name}
                 onChange={(event) => updateSupplierForm('name', event.target.value)}
               />
@@ -356,6 +405,9 @@ export default function SuppliersPage() {
               <label>
                 <span>Contact person</span>
                 <input
+                  autoComplete="name"
+                  data-testid="supplier-agent-input"
+                  maxLength="80"
                   value={supplierForm.agentName}
                   onChange={(event) => updateSupplierForm('agentName', event.target.value)}
                 />
@@ -363,6 +415,13 @@ export default function SuppliersPage() {
               <label>
                 <span>Phone</span>
                 <input
+                  autoComplete="tel"
+                  data-testid="supplier-phone-input"
+                  inputMode="numeric"
+                  maxLength="10"
+                  pattern="[6-9][0-9]{9}"
+                  placeholder="10-digit mobile"
+                  type="tel"
                   value={supplierForm.phone}
                   onChange={(event) => updateSupplierForm('phone', event.target.value)}
                 />
@@ -370,20 +429,36 @@ export default function SuppliersPage() {
               <label>
                 <span>Region</span>
                 <input
+                  data-testid="supplier-region-input"
+                  maxLength="40"
                   value={supplierForm.region}
                   onChange={(event) => updateSupplierForm('region', event.target.value)}
                 />
               </label>
               <label>
                 <span>Payment terms</span>
-                <input
-                  value={supplierForm.paymentTerms}
-                  onChange={(event) => updateSupplierForm('paymentTerms', event.target.value)}
-                />
+                <div className="erp-input-suffix-wrap">
+                  <input
+                    data-testid="supplier-payment-terms-input"
+                    inputMode="numeric"
+                    maxLength="2"
+                    pattern="[0-9]{1,2}"
+                    placeholder="7"
+                    required
+                    value={supplierForm.paymentTerms}
+                    onChange={(event) => updateSupplierForm('paymentTerms', event.target.value)}
+                  />
+                  <span className="erp-input-suffix">days</span>
+                </div>
               </label>
               <label>
                 <span>GSTIN</span>
                 <input
+                  autoCapitalize="characters"
+                  data-testid="supplier-gstin-input"
+                  maxLength="15"
+                  pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]"
+                  placeholder="15-character GSTIN"
                   value={supplierForm.gstin}
                   onChange={(event) => updateSupplierForm('gstin', event.target.value)}
                 />
@@ -392,23 +467,27 @@ export default function SuppliersPage() {
             <label>
               <span>Address</span>
               <textarea
+                data-testid="supplier-address-input"
+                maxLength="240"
                 rows="3"
                 value={supplierForm.address}
                 onChange={(event) => updateSupplierForm('address', event.target.value)}
               />
             </label>
-            <button className="erp-button" type="submit">
+            <button className="erp-button" data-testid="supplier-add-submit" type="submit">
               Add Supplier
             </button>
           </form>
 
-          <form className="erp-panel" onSubmit={submitPayment}>
+          <form className="erp-panel" data-testid="supplier-payment-form" onSubmit={submitPayment}>
             <div className="erp-panel-title">
               <h2>Supplier Payment</h2>
             </div>
             <label>
               <span>Supplier</span>
               <select
+                data-testid="supplier-payment-supplier-select"
+                required
                 value={payment.supplierId}
                 onChange={(event) => selectPaymentSupplier(event.target.value)}
               >
@@ -422,9 +501,7 @@ export default function SuppliersPage() {
             </label>
             {selectedPaymentSupplier && (
               <p
-                className={
-                  paymentExceedsOutstanding ? 'erp-muted-note erp-loss' : 'erp-muted-note'
-                }
+                className={paymentExceedsOutstanding ? 'erp-muted-note erp-loss' : 'erp-muted-note'}
               >
                 {selectedSupplierHasDue
                   ? paymentExceedsOutstanding
@@ -437,18 +514,21 @@ export default function SuppliersPage() {
               <label>
                 <span>Amount</span>
                 <input
+                  data-testid="supplier-payment-amount-input"
                   min="0"
                   max={selectedSupplierHasDue ? selectedOutstanding : undefined}
                   step="0.01"
                   type="number"
                   disabled={!selectedSupplierHasDue}
                   placeholder={selectedSupplierHasDue ? 'Enter amount due' : 'No due'}
+                  required
                   value={payment.amount}
                   onChange={(event) => updatePayment('amount', event.target.value)}
                 />
               </label>
               <button
                 className="supplier-due-button"
+                data-testid="supplier-payment-use-due"
                 disabled={!selectedSupplierHasDue}
                 title="Fill the full outstanding due amount"
                 type="button"
@@ -460,8 +540,11 @@ export default function SuppliersPage() {
               <label>
                 <span>Date</span>
                 <input
+                  data-testid="supplier-payment-date-input"
                   type="date"
                   disabled={!selectedSupplierHasDue}
+                  max={today}
+                  required
                   value={payment.paymentDate}
                   onChange={(event) => updatePayment('paymentDate', event.target.value)}
                 />
@@ -469,7 +552,9 @@ export default function SuppliersPage() {
               <label>
                 <span>Mode</span>
                 <select
+                  data-testid="supplier-payment-mode-select"
                   disabled={!selectedSupplierHasDue}
+                  required
                   value={payment.mode}
                   onChange={(event) => updatePayment('mode', event.target.value)}
                 >
@@ -482,13 +567,20 @@ export default function SuppliersPage() {
               <label className="supplier-payment-reference">
                 <span>Reference</span>
                 <input
+                  data-testid="supplier-payment-reference-input"
                   disabled={!selectedSupplierHasDue}
+                  maxLength="40"
                   value={payment.reference}
                   onChange={(event) => updatePayment('reference', event.target.value)}
                 />
               </label>
             </div>
-            <button className="erp-button secondary" disabled={!canSubmitPayment} type="submit">
+            <button
+              className="erp-button secondary"
+              data-testid="supplier-payment-submit"
+              disabled={!canSubmitPayment}
+              type="submit"
+            >
               Record Payment
             </button>
           </form>

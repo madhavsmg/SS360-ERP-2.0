@@ -37,12 +37,8 @@ function draftTitle(draft) {
 }
 
 export default function InvoiceRegister() {
-  const {
-    data,
-    deleteInvoiceDraft,
-    getInvoiceReversalBlockers,
-    revertInvoiceReceipt,
-  } = useEnterprise();
+  const { data, deleteInvoiceDraft, getInvoiceReversalBlockers, revertInvoiceReceipt } =
+    useEnterprise();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('approved');
   const [selectedKey, setSelectedKey] = useState('');
@@ -166,38 +162,48 @@ export default function InvoiceRegister() {
   }
 
   return (
-    <>
+    <div data-testid="inventory-register-workspace">
       <div className="erp-summary-grid">
-        <div className="erp-stat">
+        <div className="erp-stat erp-kpi-stat stat-draft-queue">
           <span>Stored Drafts</span>
           <strong>{recordsByTab.drafts.length}</strong>
           <small>waiting for review</small>
         </div>
-        <div className="erp-stat">
+        <div className="erp-stat erp-kpi-stat stat-approved">
           <span>Approved</span>
           <strong>{recordsByTab.approved.length}</strong>
           <small>posted into inventory</small>
         </div>
-        <div className="erp-stat">
+        <div className="erp-stat erp-kpi-stat stat-reverted">
           <span>Reverted</span>
           <strong>{recordsByTab.reverted.length}</strong>
           <small>kept for audit</small>
         </div>
-        <div className="erp-stat">
+        <div
+          className={`erp-stat erp-kpi-stat ${
+            recordsByTab.needsCorrection.length > 0 ? 'stat-correction' : 'stat-approved'
+          }`}
+        >
           <span>Needs Correction</span>
           <strong>{recordsByTab.needsCorrection.length}</strong>
           <small>drafts or stock-locked invoices</small>
         </div>
       </div>
 
-      {message && <p className="erp-message">{message}</p>}
+      {message && (
+        <p className="erp-message" data-testid="invoice-register-message">
+          {message}
+        </p>
+      )}
 
       <div className="erp-workspace invoice-register-workspace">
         <section className="erp-panel">
           <div className="erp-panel-title">
             <div>
               <h2>Invoice Queue</h2>
-              <p className="erp-muted-note">Review stored drafts, approved invoices, and corrections.</p>
+              <p className="erp-muted-note">
+                Review stored drafts, approved invoices, and corrections.
+              </p>
             </div>
             <Link className="erp-button secondary" to="/inventory/intake">
               <FileText size={17} />
@@ -209,6 +215,7 @@ export default function InvoiceRegister() {
             {registerTabs.map((tab) => (
               <button
                 className={activeTab === tab.id ? 'erp-tab active' : 'erp-tab'}
+                data-testid={`invoice-register-tab-${tab.id}`}
                 key={tab.id}
                 type="button"
                 onClick={() => {
@@ -231,7 +238,12 @@ export default function InvoiceRegister() {
 
               return (
                 <button
-                  className={key === recordKey(selectedRecord || {}) ? 'invoice-list-row active' : 'invoice-list-row'}
+                  className={
+                    key === recordKey(selectedRecord || {})
+                      ? 'invoice-list-row active'
+                      : 'invoice-list-row'
+                  }
+                  data-testid={`invoice-register-row-${key}`}
                   key={key}
                   type="button"
                   onClick={() => setSelectedKey(key)}
@@ -280,7 +292,7 @@ export default function InvoiceRegister() {
         </aside>
       </div>
       {confirmationDialog}
-    </>
+    </div>
   );
 }
 
@@ -314,7 +326,11 @@ function DraftDetail({ draft, onDelete }) {
         <Link className="erp-button" to={`/inventory/intake?draftId=${draft.id}`}>
           Open Draft
         </Link>
-        <button className="erp-button secondary danger" type="button" onClick={() => onDelete(draft)}>
+        <button
+          className="erp-button secondary danger"
+          type="button"
+          onClick={() => onDelete(draft)}
+        >
           <Trash2 size={17} />
           Delete Draft
         </button>
@@ -376,6 +392,7 @@ function InvoiceDetail({
           <label>
             <span>Revert reason</span>
             <textarea
+              data-testid="invoice-revert-reason-input"
               rows="3"
               value={revertReason}
               onChange={(event) => setRevertReason(event.target.value)}
@@ -384,6 +401,7 @@ function InvoiceDetail({
           </label>
           <button
             className="erp-button secondary"
+            data-testid="invoice-revert-button"
             disabled={!canRevert}
             type="button"
             onClick={() => onRevert(invoice)}

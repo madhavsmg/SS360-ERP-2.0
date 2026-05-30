@@ -1,6 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useConfirmationDialog } from '../../components/ConfirmationDialog';
 import { useEnterprise } from '../../context/EnterpriseContext';
+import {
+  sanitizeIndianMobileInput,
+  validateOptionalIndianMobile,
+} from '../../utils/businessValidation';
 import { formatKg, formatMoney } from '../../utils/formatters';
 
 const customerDefaults = {
@@ -8,6 +12,7 @@ const customerDefaults = {
   type: 'Wholesale',
   phone: '',
   city: '',
+  state: '',
   deliveryPreference: 'Auto transport',
   creditLimit: '50000',
 };
@@ -24,9 +29,13 @@ export default function CustomersPage() {
       orders: data.salesOrders.filter((order) => order.customerId === customer.id),
     }));
   }, [data.customers, data.salesOrders]);
+  const selectedPaymentCustomer = data.customers.find(
+    (customer) => customer.id === payment.customerId
+  );
 
   function updateForm(field, value) {
-    setForm((currentForm) => ({ ...currentForm, [field]: value }));
+    const nextValue = field === 'phone' ? sanitizeIndianMobileInput(value) : value;
+    setForm((currentForm) => ({ ...currentForm, [field]: nextValue }));
   }
 
   function submitCustomer(event) {
@@ -34,6 +43,18 @@ export default function CustomersPage() {
 
     if (!form.name.trim()) {
       setMessage('Customer name is required.');
+      return;
+    }
+
+    const phoneError = validateOptionalIndianMobile(form.phone, 'Customer phone');
+
+    if (phoneError) {
+      setMessage(phoneError);
+      return;
+    }
+
+    if (numberValue(form.creditLimit) < 0) {
+      setMessage('Credit limit cannot be negative.');
       return;
     }
 
@@ -45,14 +66,19 @@ export default function CustomersPage() {
         details: [
           { label: 'Customer', value: form.name.trim() },
           { label: 'Type', value: form.type },
+          { label: 'State', value: form.state.trim() || 'Auto-filled from city' },
           { label: 'Credit Limit', value: formatMoney(form.creditLimit) },
         ],
         confirmLabel: 'Add Customer',
       },
       () => {
-        const customer = addCustomer(form);
-        setForm(customerDefaults);
-        setMessage(`${customer.name} added to the customer database.`);
+        try {
+          const customer = addCustomer(form);
+          setForm(customerDefaults);
+          setMessage(`${customer.name} added to the customer database.`);
+        } catch (error) {
+          setMessage(error.message);
+        }
       }
     );
   }
@@ -60,7 +86,7 @@ export default function CustomersPage() {
   function submitPayment(event) {
     event.preventDefault();
 
-    const customer = data.customers.find((item) => item.id === payment.customerId);
+    const customer = selectedPaymentCustomer;
     const paymentAmount = numberValue(payment.amount);
 
     if (!customer) {
@@ -70,6 +96,15 @@ export default function CustomersPage() {
 
     if (paymentAmount <= 0) {
       setMessage('Payment amount must be greater than zero.');
+      return;
+    }
+
+    if (paymentAmount > numberValue(customer.outstanding)) {
+      setMessage(
+        `Payment cannot exceed ${customer.name}'s outstanding balance of ${formatMoney(
+          customer.outstanding
+        )}.`
+      );
       return;
     }
 
@@ -98,7 +133,7 @@ export default function CustomersPage() {
   }
 
   return (
-    <section className="erp-page customer-module">
+    <section className="erp-page customer-module" data-testid="page-customers">
       <header className="erp-header">
         <div>
           <span className="erp-kicker">Customers</span>
@@ -109,30 +144,41 @@ export default function CustomersPage() {
         </div>
       </header>
 
-      {message && <p className="erp-message">{message}</p>}
+      {message && (
+        <p className="erp-message" data-testid="customer-message">
+          {message}
+        </p>
+      )}
 
       <div className="erp-workspace customer-workspace">
         <div className="erp-panel customer-ledger-panel">
           <div className="erp-panel-title">
             <h2>Customer Ledger</h2>
           </div>
-          <div className="erp-table table-customer">
+          <div className="erp-table table-customer" data-testid="customer-ledger">
             <div className="erp-row head">
               <span>Customer</span>
-              <span>City</span>
+              <span>Location</span>
               <span>Credit</span>
               <span>Outstanding</span>
               <span>Last Order</span>
             </div>
             {customerOrders.map(({ customer, orders }) => (
-              <div className="erp-row" key={customer.id}>
+              <div
+                className="erp-row"
+                data-testid={`customer-ledger-row-${customer.id}`}
+                key={customer.id}
+              >
                 <span>
                   <strong>{customer.name}</strong>
                   <small>
                     {customer.type} | {customer.phone}
                   </small>
                 </span>
-                <span>{customer.city}</span>
+                <span>
+                  <strong>{customer.city || 'Not set'}</strong>
+                  <small>{customer.state || 'State not set'}</small>
+                </span>
                 <span>{formatMoney(customer.creditLimit)}</span>
                 <span
                   className={
@@ -157,13 +203,17 @@ export default function CustomersPage() {
         </div>
 
         <aside className="customer-action-stack">
-          <form className="erp-panel" onSubmit={submitCustomer}>
+          <form className="erp-panel" data-testid="customer-add-form" onSubmit={submitCustomer}>
             <div className="erp-panel-title">
               <h2>Add Customer</h2>
             </div>
             <label>
               <span>Name</span>
               <input
+                autoComplete="organization"
+                data-testid="customer-name-input"
+                maxLength="80"
+                required
                 value={form.name}
                 onChange={(event) => updateForm('name', event.target.value)}
               />
@@ -172,6 +222,8 @@ export default function CustomersPage() {
               <label>
                 <span>Type</span>
                 <select
+                  data-testid="customer-type-select"
+                  required
                   value={form.type}
                   onChange={(event) => updateForm('type', event.target.value)}
                 >
@@ -184,6 +236,13 @@ export default function CustomersPage() {
               <label>
                 <span>Phone</span>
                 <input
+                  autoComplete="tel"
+                  data-testid="customer-phone-input"
+                  inputMode="numeric"
+                  maxLength="10"
+                  pattern="[6-9][0-9]{9}"
+                  placeholder="10-digit mobile"
+                  type="tel"
                   value={form.phone}
                   onChange={(event) => updateForm('phone', event.target.value)}
                 />
@@ -191,14 +250,30 @@ export default function CustomersPage() {
               <label>
                 <span>City</span>
                 <input
+                  autoComplete="address-level2"
+                  data-testid="customer-city-input"
+                  maxLength="40"
                   value={form.city}
                   onChange={(event) => updateForm('city', event.target.value)}
                 />
               </label>
               <label>
+                <span>State</span>
+                <input
+                  autoComplete="address-level1"
+                  data-testid="customer-state-input"
+                  maxLength="60"
+                  value={form.state}
+                  onChange={(event) => updateForm('state', event.target.value)}
+                />
+              </label>
+              <label>
                 <span>Credit limit</span>
                 <input
+                  data-testid="customer-credit-limit-input"
                   min="0"
+                  required
+                  step="1"
                   type="number"
                   value={form.creditLimit}
                   onChange={(event) => updateForm('creditLimit', event.target.value)}
@@ -208,22 +283,26 @@ export default function CustomersPage() {
             <label>
               <span>Delivery preference</span>
               <input
+                data-testid="customer-delivery-input"
+                maxLength="80"
                 value={form.deliveryPreference}
                 onChange={(event) => updateForm('deliveryPreference', event.target.value)}
               />
             </label>
-            <button className="erp-button" type="submit">
+            <button className="erp-button" data-testid="customer-add-submit" type="submit">
               Add Customer
             </button>
           </form>
 
-          <form className="erp-panel" onSubmit={submitPayment}>
+          <form className="erp-panel" data-testid="customer-payment-form" onSubmit={submitPayment}>
             <div className="erp-panel-title">
               <h2>Customer Payment</h2>
             </div>
             <label>
               <span>Customer</span>
               <select
+                data-testid="customer-payment-customer-select"
+                required
                 value={payment.customerId}
                 onChange={(event) => setPayment({ ...payment, customerId: event.target.value })}
               >
@@ -238,13 +317,21 @@ export default function CustomersPage() {
             <label>
               <span>Amount</span>
               <input
+                data-testid="customer-payment-amount-input"
                 min="0"
+                max={selectedPaymentCustomer?.outstanding || undefined}
+                step="0.01"
                 type="number"
+                required
                 value={payment.amount}
                 onChange={(event) => setPayment({ ...payment, amount: event.target.value })}
               />
             </label>
-            <button className="erp-button secondary" type="submit">
+            <button
+              className="erp-button secondary"
+              data-testid="customer-payment-submit"
+              type="submit"
+            >
               Record Payment
             </button>
           </form>

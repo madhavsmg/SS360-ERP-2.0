@@ -3,6 +3,7 @@ import { Camera, Plus, QrCode, Trash2, X } from 'lucide-react';
 import { useConfirmationDialog } from '../../components/ConfirmationDialog';
 import { useEnterprise } from '../../context/EnterpriseContext';
 import { formatKg, formatMoney, formatPercent } from '../../utils/formatters';
+import { getBagOptionLabel, readQrValue } from '../../utils/qrPayloads';
 
 const blendDefaults = {
   productName: '',
@@ -21,26 +22,8 @@ const manualDefaults = {
   bagCount: '1',
 };
 
-function readQrValue(value) {
-  const trimmedValue = value.trim();
-
-  if (!trimmedValue) {
-    return {};
-  }
-
-  try {
-    return JSON.parse(trimmedValue);
-  } catch {
-    return { id: trimmedValue };
-  }
-}
-
 function lineKey(lotId, bagSizeKg) {
   return `${lotId}:${bagSizeKg}`;
-}
-
-function getBagOptionLabel(option) {
-  return `${option.remainingBagCount} bag(s) x ${option.bagSizeKg} kg`;
 }
 
 function mergeBlendLines(components, lot, bagSizeKg, bagCount, bagIds = []) {
@@ -120,7 +103,8 @@ export default function ProductionPage() {
   const expectedRevenue = hasBlendBags ? preview.expectedRevenue : 0;
   const expectedProfit = hasBlendBags ? preview.expectedProfit : 0;
   const marginPercent = hasBlendBags ? preview.marginPercent : 0;
-  const profitPerKg = hasBlendBags && targetPricePerKg > 0 ? targetPricePerKg - preview.costPerKg : 0;
+  const profitPerKg =
+    hasBlendBags && targetPricePerKg > 0 ? targetPricePerKg - preview.costPerKg : 0;
 
   function updateForm(field, value) {
     setForm((currentForm) => ({ ...currentForm, [field]: value }));
@@ -353,7 +337,7 @@ export default function ProductionPage() {
     event.preventDefault();
 
     if (!form.productName.trim()) {
-      setMessage('Enter a finished product name.');
+      setMessage('Enter a blend product name.');
       return;
     }
 
@@ -371,7 +355,7 @@ export default function ProductionPage() {
       {
         title: 'Create blend batch?',
         description:
-          'This will deduct the selected raw bags from inventory and add the finished blend stock.',
+          'This will deduct the selected raw bags from inventory and add the blended batch stock.',
         details: [
           { label: 'Product', value: form.productName.trim() },
           { label: 'Draft Bags', value: draftBagCount },
@@ -389,7 +373,7 @@ export default function ProductionPage() {
           setMessage(
             `${batch.productName} created with ${formatKg(
               batch.batchKg
-            )} finished stock and ${formatMoney(batch.costPerKg)}/kg cost.`
+            )} blended stock and ${formatMoney(batch.costPerKg)}/kg cost.`
           );
         } catch (error) {
           setMessage(error.message);
@@ -399,46 +383,60 @@ export default function ProductionPage() {
   }
 
   return (
-    <section className="erp-page production-module">
+    <section className="erp-page production-module" data-testid="page-production">
       <header className="erp-header">
         <div>
           <span className="erp-kicker">Production</span>
           <h1>QR Blending & Batch Costing</h1>
           <p>
-            Scan godown bags into a blend draft, estimate cost before approval, and post the
-            finished blend into inventory only when the mix works.
+            Scan godown bags into a blend draft, estimate cost before approval, and post the blended
+            batch into inventory only when the mix works.
           </p>
         </div>
       </header>
 
       <div className="erp-summary-grid">
-        <div className="erp-stat">
+        <div className="erp-stat erp-kpi-stat stat-work-in-progress">
           <span>Draft Bags</span>
           <strong>{draftBagCount}</strong>
           <small>selected for this blend</small>
         </div>
-        <div className="erp-stat">
+        <div className="erp-stat erp-kpi-stat stat-stock-weight">
           <span>Batch Weight</span>
           <strong>{formatKg(preview.batchKg)}</strong>
           <small>raw tea in calculator</small>
         </div>
-        <div className="erp-stat">
+        <div className="erp-stat erp-kpi-stat stat-cost">
           <span>Cost/Kg</span>
           <strong>{formatMoney(preview.costPerKg)}</strong>
           <small>with overheads</small>
         </div>
-        <div className="erp-stat">
+        <div
+          className={`erp-stat erp-kpi-stat ${
+            !hasBlendBags
+              ? 'stat-margin-waiting'
+              : expectedProfit < 0
+                ? 'stat-margin-negative'
+                : 'stat-margin-positive'
+          }`}
+        >
           <span>Target Margin</span>
           <strong className={hasBlendBags && expectedProfit < 0 ? 'erp-loss' : 'erp-profit'}>
             {formatPercent(marginPercent)}
           </strong>
           <small>
-            {hasBlendBags ? `${formatMoney(expectedProfit)} expected profit` : 'Add bags to calculate'}
+            {hasBlendBags
+              ? `${formatMoney(expectedProfit)} expected profit`
+              : 'Add bags to calculate'}
           </small>
         </div>
       </div>
 
-      {message && <p className="erp-message">{message}</p>}
+      {message && (
+        <p className="erp-message" data-testid="production-message">
+          {message}
+        </p>
+      )}
 
       <form className="erp-workspace production-workspace" onSubmit={submitBlend}>
         <section className="erp-panel production-builder-panel">
@@ -458,18 +456,29 @@ export default function ProductionPage() {
             <label>
               <span>Blend Product</span>
               <input
+                data-testid="production-product-name-input"
+                maxLength="80"
+                required
                 value={form.productName}
                 onChange={(event) => updateForm('productName', event.target.value)}
               />
             </label>
             <label>
               <span>SKU</span>
-              <input value={form.sku} onChange={(event) => updateForm('sku', event.target.value)} />
+              <input
+                autoCapitalize="characters"
+                data-testid="production-sku-input"
+                maxLength="32"
+                value={form.sku}
+                onChange={(event) => updateForm('sku', event.target.value)}
+              />
             </label>
             <label>
               <span>Target blend price/kg</span>
               <input
+                data-testid="production-target-price-input"
                 min="0"
+                required
                 step="0.01"
                 type="number"
                 value={form.sellingPricePerKg}
@@ -482,6 +491,7 @@ export default function ProductionPage() {
             <label>
               <span>Packing/kg</span>
               <input
+                data-testid="production-packing-cost-input"
                 min="0"
                 step="0.01"
                 type="number"
@@ -492,6 +502,7 @@ export default function ProductionPage() {
             <label>
               <span>Labor</span>
               <input
+                data-testid="production-labor-cost-input"
                 min="0"
                 step="0.01"
                 type="number"
@@ -502,6 +513,7 @@ export default function ProductionPage() {
             <label>
               <span>Overhead</span>
               <input
+                data-testid="production-overhead-cost-input"
                 min="0"
                 step="0.01"
                 type="number"
@@ -518,7 +530,10 @@ export default function ProductionPage() {
                 {form.components.length ? 'Draft Ready' : 'Scan Bags'}
               </span>
             </div>
-            <div className="erp-table table-production-bags">
+            <div
+              className="erp-table table-production-bags"
+              data-testid="production-draft-bags-table"
+            >
               <div className="erp-row head">
                 <span>Raw Tea</span>
                 <span>Bags</span>
@@ -556,7 +571,7 @@ export default function ProductionPage() {
             </div>
           </div>
 
-          <button className="erp-button" type="submit">
+          <button className="erp-button" data-testid="production-create-blend-button" type="submit">
             Create Blend
           </button>
         </section>
@@ -565,7 +580,7 @@ export default function ProductionPage() {
           <div className="erp-panel-title">
             <h2>Price Prediction</h2>
           </div>
-          <dl className="erp-cost-list">
+          <dl className="erp-cost-list" data-testid="production-price-preview">
             <div>
               <dt>Batch kg</dt>
               <dd>{formatKg(preview.batchKg)}</dd>
@@ -645,12 +660,17 @@ export default function ProductionPage() {
             <label>
               <span>Paste QR payload or lot ID</span>
               <textarea
+                data-testid="production-qr-input"
                 rows="4"
                 value={qrText}
                 onChange={(event) => setQrText(event.target.value)}
               />
             </label>
-            <button className="erp-button secondary" type="submit">
+            <button
+              className="erp-button secondary"
+              data-testid="production-add-qr-button"
+              type="submit"
+            >
               <QrCode size={17} />
               Add QR Scan
             </button>
@@ -665,6 +685,8 @@ export default function ProductionPage() {
             <label>
               <span>Raw inventory lot</span>
               <select
+                data-testid="production-manual-lot-select"
+                required
                 value={manualForm.lotId}
                 onChange={(event) => selectManualLot(event.target.value)}
               >
@@ -680,6 +702,8 @@ export default function ProductionPage() {
               <label>
                 <span>Bag size</span>
                 <select
+                  data-testid="production-manual-bag-size-select"
+                  required
                   value={manualForm.bagSizeKg}
                   onChange={(event) =>
                     setManualForm((currentForm) => ({
@@ -700,7 +724,10 @@ export default function ProductionPage() {
               <label>
                 <span>Bag count</span>
                 <input
+                  data-testid="production-manual-bag-count-input"
                   min="1"
+                  max={manualAvailable || undefined}
+                  required
                   step="1"
                   type="number"
                   value={manualForm.bagCount}
@@ -716,7 +743,11 @@ export default function ProductionPage() {
             <p className="erp-muted-note">
               Available after current draft: {manualAvailable} bag(s)
             </p>
-            <button className="erp-button secondary" type="submit">
+            <button
+              className="erp-button secondary"
+              data-testid="production-add-manual-button"
+              type="submit"
+            >
               <Plus size={17} />
               Add From Inventory
             </button>
@@ -726,9 +757,9 @@ export default function ProductionPage() {
 
       <div className="erp-panel production-trace-panel">
         <div className="erp-panel-title">
-          <h2>Finished Batch Traceability</h2>
+          <h2>Blended Batch Traceability</h2>
         </div>
-        <div className="erp-table table-production">
+        <div className="erp-table table-production" data-testid="production-batch-table">
           <div className="erp-row head">
             <span>Batch</span>
             <span>Stock</span>
@@ -737,7 +768,11 @@ export default function ProductionPage() {
             <span>Profit</span>
           </div>
           {data.blendBatches.map((batch) => (
-            <div className="erp-row" key={batch.id}>
+            <div
+              className="erp-row"
+              data-testid={`production-batch-row-${batch.id}`}
+              key={batch.id}
+            >
               <span>
                 <strong>{batch.productName}</strong>
                 <small>

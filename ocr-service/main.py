@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.routes.ocr_routes import router as ocr_router
+from app.services.paddle_ocr_service import get_ocr_engine
 from app.utils.file_utils import ensure_runtime_dirs
 
 
@@ -35,9 +36,19 @@ app.include_router(ocr_router)
 
 @app.get("/health")
 def health_check():
+    get_ocr_engine()
     return {
         "status": "ok",
         "service": "SS360 OCR Service",
         "engine": "PaddleOCR",
+        "engineReady": True,
         "freeLocal": True,
+    }
+
+
+@app.get("/live")
+def live_check():
+    return {
+        "status": "ok",
+        "service": "SS360 OCR Service",
     }

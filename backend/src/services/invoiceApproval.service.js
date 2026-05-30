@@ -1,39 +1,61 @@
 import { prisma } from '../config/prisma.js';
+import {
+  validateOptionalGstin,
+  validateOptionalIndianMobile,
+} from '../utils/businessValidation.utils.js';
 import { makeId } from '../utils/id.utils.js';
 import { numberValue, roundMoney } from '../utils/number.utils.js';
 
-
 const today = () => new Date().toISOString().slice(0, 10);
 
-
 export async function approveInvoiceDraft(invoice, draft) {
-  const normalized = normalizeDraft(draft);
-  const supplierName = normalized.vendor.name.trim();
-
-  if (!supplierName) {
-    const error = new Error('Vendor name is required before approval.');
-    error.statusCode = 400;
-    throw error;
-  }
-
-  if (!normalized.items.length) {
-    const error = new Error('Add at least one invoice stock line before approval.');
-    error.statusCode = 400;
-    throw error;
-  }
-
-  const invoiceNumber = normalized.invoice.number || invoice.originalFileName;
-  const invoiceDate = normalized.invoice.date || today();
-  const invoiceIdForErp = makeId('INV', invoiceNumber);
-  const lineRecords = buildLineRecords({
-    draft: normalized,
-    invoice,
-    invoiceDate,
-    invoiceNumber,
-  });
-  const totals = buildTotals(normalized, lineRecords);
-
   return prisma.$transaction(async (tx) => {
+    const currentInvoice = await tx.invoice.findUnique({
+      where: { id: invoice.id },
+      include: { rawLots: true },
+    });
+
+    if (!currentInvoice) {
+      const error = new Error('Invoice not found.');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (currentInvoice.status === 'APPROVED') {
+      return buildAlreadyApprovedResult(tx, currentInvoice);
+    }
+
+    const normalized = normalizeDraft(draft);
+    validateApprovalDraft(normalized);
+
+    const claim = await tx.invoice.updateMany({
+      where: {
+        id: currentInvoice.id,
+        status: { not: 'APPROVED' },
+      },
+      data: { status: 'NEEDS_REVIEW' },
+    });
+
+    if (claim.count === 0) {
+      const approvedInvoice = await tx.invoice.findUnique({
+        where: { id: currentInvoice.id },
+        include: { rawLots: true },
+      });
+      return buildAlreadyApprovedResult(tx, approvedInvoice);
+    }
+
+    const supplierName = normalized.vendor.name.trim();
+    const invoiceNumber = normalized.invoice.number || currentInvoice.originalFileName;
+    const invoiceDate = normalized.invoice.date || today();
+    const invoiceIdForErp = makeId('INV', invoiceNumber);
+    const lineRecords = buildLineRecords({
+      draft: normalized,
+      invoice: currentInvoice,
+      invoiceDate,
+      invoiceNumber,
+    });
+    const totals = buildTotals(normalized, lineRecords);
+
     const supplier = await tx.supplier.upsert({
       where: { name: supplierName },
       create: {
@@ -53,7 +75,7 @@ export async function approveInvoiceDraft(invoice, draft) {
 
     const rawLots = lineRecords.map((line) => ({
       id: line.rawLotId,
-      invoiceId: invoice.id,
+      invoiceId: currentInvoice.id,
       supplierId: supplier.id,
       supplierName: supplier.name,
       variety: line.variety,
@@ -91,8 +113,8 @@ export async function approveInvoiceDraft(invoice, draft) {
       supplierName: supplier.name,
       vendorAddress: normalized.vendor.address,
       vendorGstin: normalized.vendor.gstin,
-      sourceName: normalized.sourceName || invoice.originalFileName,
-      sourceType: normalized.sourceType || invoice.sourceType || '',
+      sourceName: normalized.sourceName || currentInvoice.originalFileName,
+      sourceType: normalized.sourceType || currentInvoice.sourceType || '',
       pageCount: numberValue(normalized.pageCount),
       extractionMode: normalized.extractionMode || '',
       confidence: numberValue(normalized.confidence),
@@ -114,7 +136,7 @@ export async function approveInvoiceDraft(invoice, draft) {
     };
 
     const updatedInvoice = await tx.invoice.update({
-      where: { id: invoice.id },
+      where: { id: currentInvoice.id },
       data: {
         status: 'APPROVED',
         reviewJson: normalized,
@@ -128,10 +150,23 @@ export async function approveInvoiceDraft(invoice, draft) {
       supplier,
       rawLots,
       approvedJson,
+      alreadyApproved: false,
     };
   });
 }
 
+async function buildAlreadyApprovedResult(tx, invoice) {
+  const supplierId = invoice?.approvedJson?.supplierId || invoice?.rawLots?.[0]?.supplierId;
+  const supplier = supplierId ? await tx.supplier.findUnique({ where: { id: supplierId } }) : null;
+
+  return {
+    invoice,
+    supplier,
+    rawLots: invoice?.rawLots || [],
+    approvedJson: invoice?.approvedJson || null,
+    alreadyApproved: true,
+  };
+}
 
 function normalizeDraft(draft) {
   const source = draft || {};
@@ -153,19 +188,23 @@ function normalizeDraft(draft) {
   };
 }
 
-
 function buildLineRecords({ draft, invoice, invoiceDate }) {
-  const totalReceivedKg = draft.items.reduce((total, item) => total + lineNumbers(item).receivedKg, 0);
+  const totalReceivedKg = draft.items.reduce(
+    (total, item) => total + lineNumbers(item).receivedKg,
+    0
+  );
   const miscChargesTotal =
     numberValue(draft.totals.miscChargesTotal) ||
     draft.charges.reduce((total, charge) => total + numberValue(charge.amount), 0);
 
   return draft.items.map((item) => {
     const numbers = lineNumbers(item);
-    const allocationRatio = totalReceivedKg > 0 ? numbers.receivedKg / totalReceivedKg : 1 / draft.items.length;
+    const allocationRatio =
+      totalReceivedKg > 0 ? numbers.receivedKg / totalReceivedKg : 1 / draft.items.length;
     const allocatedCharges = roundMoney(miscChargesTotal * allocationRatio);
     const landedCost = roundMoney(numbers.taxableValue + allocatedCharges);
-    const landedCostPerKg = numbers.receivedKg > 0 ? roundMoney(landedCost / numbers.receivedKg) : 0;
+    const landedCostPerKg =
+      numbers.receivedKg > 0 ? roundMoney(landedCost / numbers.receivedKg) : 0;
     const grade = item.grade || item.hsn || 'Invoice';
     const rawLotId = makeId('RAW', `${item.teaName}-${grade}`);
 
@@ -210,16 +249,73 @@ function buildLineRecords({ draft, invoice, invoiceDate }) {
   });
 }
 
+function validateApprovalDraft(draft) {
+  const supplierName = draft.vendor.name.trim();
+
+  if (!supplierName) {
+    throwPublicError('Vendor name is required before approval.');
+  }
+
+  const vendorPhoneError = validateOptionalIndianMobile(draft.vendor.phone, 'Vendor mobile number');
+  if (vendorPhoneError) {
+    throwPublicError(vendorPhoneError);
+  }
+
+  const vendorGstinError = validateOptionalGstin(draft.vendor.gstin, 'Vendor GSTIN');
+  if (vendorGstinError) {
+    throwPublicError(vendorGstinError);
+  }
+
+  const invoiceDate = draft.invoice.date;
+  if (invoiceDate && Number.isNaN(Date.parse(invoiceDate))) {
+    throwPublicError('Invoice date must be a valid date.');
+  }
+
+  if (invoiceDate && invoiceDate > today()) {
+    throwPublicError('Invoice date cannot be in the future.');
+  }
+
+  if (!draft.items.length) {
+    throwPublicError('Add at least one invoice stock line before approval.');
+  }
+
+  draft.items.forEach((item, index) => {
+    const numbers = lineNumbers(item);
+    const lineLabel = `Stock line ${index + 1}`;
+
+    if (!String(item.teaName || '').trim()) {
+      throwPublicError(`${lineLabel} needs a tea name.`);
+    }
+
+    if (numbers.quantity <= 0 || numbers.receivedKg <= 0 || numbers.ratePerKg <= 0) {
+      throwPublicError(`${lineLabel} needs positive quantity, received kg, and rate/kg.`);
+    }
+  });
+}
+
+function throwPublicError(message) {
+  const error = new Error(message);
+  error.statusCode = 400;
+  throw error;
+}
 
 function buildTotals(draft, lineRecords) {
   const taxableTotal = roundMoney(lineRecords.reduce((total, line) => total + line.goodsAmount, 0));
-  const parsedChargesTotal = roundMoney(draft.charges.reduce((total, charge) => total + numberValue(charge.amount), 0));
-  const miscChargesTotal = roundMoney(numberValue(draft.totals.miscChargesTotal, parsedChargesTotal));
+  const parsedChargesTotal = roundMoney(
+    draft.charges.reduce((total, charge) => total + numberValue(charge.amount), 0)
+  );
+  const miscChargesTotal = roundMoney(
+    numberValue(draft.totals.miscChargesTotal, parsedChargesTotal)
+  );
   const cgstAmount = roundMoney(numberValue(draft.totals.cgstAmount));
   const sgstAmount = roundMoney(numberValue(draft.totals.sgstAmount));
   const igstAmount = roundMoney(numberValue(draft.totals.igstAmount));
-  const grossTotal = roundMoney(numberValue(draft.totals.grossTotal, taxableTotal + miscChargesTotal));
-  const netTotal = roundMoney(numberValue(draft.totals.netTotal, grossTotal + cgstAmount + sgstAmount + igstAmount));
+  const grossTotal = roundMoney(
+    numberValue(draft.totals.grossTotal, taxableTotal + miscChargesTotal)
+  );
+  const netTotal = roundMoney(
+    numberValue(draft.totals.netTotal, grossTotal + cgstAmount + sgstAmount + igstAmount)
+  );
 
   return {
     taxableValue: roundMoney(numberValue(draft.totals.taxableValue, taxableTotal)),
@@ -233,13 +329,17 @@ function buildTotals(draft, lineRecords) {
   };
 }
 
-
 function lineNumbers(item) {
   const quantity = numberValue(item.quantity || item.bagCount || item.bags);
   const unitWeightKg = numberValue(item.unitWeightKg || item.bagWeightKg, 1);
   const receivedKg = numberValue(item.receivedKg || item.totalNett || quantity * unitWeightKg);
-  const taxableValue = numberValue(item.taxableValue || item.amount || receivedKg * numberValue(item.ratePerKg || item.rate));
-  const ratePerKg = numberValue(item.ratePerKg || item.rate, receivedKg > 0 ? taxableValue / receivedKg : 0);
+  const taxableValue = numberValue(
+    item.taxableValue || item.amount || receivedKg * numberValue(item.ratePerKg || item.rate)
+  );
+  const ratePerKg = numberValue(
+    item.ratePerKg || item.rate,
+    receivedKg > 0 ? taxableValue / receivedKg : 0
+  );
   const cgstAmount = numberValue(item.cgstAmount);
   const sgstAmount = numberValue(item.sgstAmount);
   const igstAmount = numberValue(item.igstAmount);
@@ -256,7 +356,9 @@ function lineNumbers(item) {
     sgstAmount: roundMoney(sgstAmount),
     igstRate: numberValue(item.igstRate),
     igstAmount: roundMoney(igstAmount),
-    lineTotal: roundMoney(numberValue(item.lineTotal, taxableValue + cgstAmount + sgstAmount + igstAmount)),
+    lineTotal: roundMoney(
+      numberValue(item.lineTotal, taxableValue + cgstAmount + sgstAmount + igstAmount)
+    ),
     reorderKg: numberValue(item.reorderKg, Math.max(receivedKg * 0.2, 25)),
   };
 }

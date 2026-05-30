@@ -4,7 +4,7 @@
     "es2021": true
   },
   "ignorePatterns": ["dist/", "build/", "node_modules/", "backend/node_modules/"],
-  "extends": ["eslint:recommended", "plugin:react/recommended"],
+  "extends": ["eslint:recommended", "plugin:react/recommended", "plugin:react-hooks/recommended"],
   "parser": "@babel/eslint-parser",
   "parserOptions": {
     "ecmaFeatures": {
@@ -14,11 +14,12 @@
     "sourceType": "module",
     "requireConfigFile": false
   },
-  "plugins": ["react"],
+  "plugins": ["react", "react-hooks", "react-refresh"],
   "rules": {
     "camelcase": ["error", { "properties": "always" }],
     "react/react-in-jsx-scope": "off",
     "react/prop-types": "off",
+    "react-refresh/only-export-components": ["warn", { "allowConstantExport": true }],
     "no-unused-vars": "warn",
     "no-console": "off"
   },
@@ -34,6 +35,25 @@
         "browser": false,
         "node": true,
         "es2022": true
+      }
+    },
+    {
+      "files": ["scripts/**/*.js", "scripts/**/*.mjs", "playwright.config.js"],
+      "env": {
+        "browser": false,
+        "node": true,
+        "es2022": true
+      }
+    },
+    {
+      "files": ["tests/e2e/**/*.js"],
+      "env": {
+        "browser": false,
+        "node": true,
+        "es2022": true
+      },
+      "rules": {
+        "react-hooks/rules-of-hooks": "off"
       }
     }
   ]
