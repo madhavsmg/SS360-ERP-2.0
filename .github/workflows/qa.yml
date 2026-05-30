@@ -22,6 +22,7 @@ jobs:
       PLAYWRIGHT_SKIP_WEBSERVER: '0'
       E2E_ENV: qa
       E2E_REQUIRE_DATABASE: '0'
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ss360_erp_ci?schema=public
     steps:
       - name: Checkout
         uses: actions/checkout@v4
