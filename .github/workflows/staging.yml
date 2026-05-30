@@ -1,0 +1,65 @@
+name: Staging Regression
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: Staging frontend URL
+        required: false
+        type: string
+      api_url:
+        description: Staging backend API URL
+        required: false
+        type: string
+
+concurrency:
+  group: staging-regression
+  cancel-in-progress: true
+
+jobs:
+  staging:
+    name: Staging Playwright regression
+    runs-on: ubuntu-latest
+    environment: staging
+    env:
+      PLAYWRIGHT_STAGE_BASE_URL: ${{ inputs.base_url || vars.PLAYWRIGHT_STAGE_BASE_URL }}
+      PLAYWRIGHT_API_URL: ${{ inputs.api_url || vars.PLAYWRIGHT_API_URL }}
+      PLAYWRIGHT_SKIP_WEBSERVER: '1'
+      E2E_ENV: staging
+      E2E_REQUIRE_DATABASE: '0'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: npm --prefix backend ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Reset staging E2E data
+        run: npm run e2e:seed
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Run staging Playwright regression
+        run: npm run test:e2e:stage:ci
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-playwright-report
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore

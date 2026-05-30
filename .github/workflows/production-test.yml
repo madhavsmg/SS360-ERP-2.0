@@ -1,0 +1,70 @@
+name: Production-Test Regression
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: Production-test sandbox frontend URL
+        required: false
+        type: string
+      api_url:
+        description: Production-test sandbox backend API URL
+        required: false
+        type: string
+      test_tenant_id:
+        description: Dedicated test tenant or sandbox identifier
+        required: true
+        type: string
+
+concurrency:
+  group: production-test-regression
+  cancel-in-progress: false
+
+jobs:
+  production-test:
+    name: Production-test sandbox regression
+    runs-on: ubuntu-latest
+    environment: production-test
+    env:
+      PLAYWRIGHT_PROD_BASE_URL: ${{ inputs.base_url || vars.PLAYWRIGHT_PROD_BASE_URL }}
+      PLAYWRIGHT_API_URL: ${{ inputs.api_url || vars.PLAYWRIGHT_API_URL }}
+      PLAYWRIGHT_SKIP_WEBSERVER: '1'
+      E2E_ENV: production-test
+      E2E_TEST_TENANT_ID: ${{ inputs.test_tenant_id }}
+      E2E_REQUIRE_DATABASE: '0'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: npm --prefix backend ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Reset production-test sandbox data
+        run: npm run e2e:seed
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Run production-test Playwright regression
+        run: npm run test:e2e:prod:ci
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-test-playwright-report
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore

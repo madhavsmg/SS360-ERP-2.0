@@ -383,7 +383,7 @@ export default function ProductionPage() {
   }
 
   return (
-    <section className="erp-page production-module">
+    <section className="erp-page production-module" data-testid="page-production">
       <header className="erp-header">
         <div>
           <span className="erp-kicker">Production</span>
@@ -432,7 +432,11 @@ export default function ProductionPage() {
         </div>
       </div>
 
-      {message && <p className="erp-message">{message}</p>}
+      {message && (
+        <p className="erp-message" data-testid="production-message">
+          {message}
+        </p>
+      )}
 
       <form className="erp-workspace production-workspace" onSubmit={submitBlend}>
         <section className="erp-panel production-builder-panel">
@@ -452,6 +456,7 @@ export default function ProductionPage() {
             <label>
               <span>Blend Product</span>
               <input
+                data-testid="production-product-name-input"
                 maxLength="80"
                 required
                 value={form.productName}
@@ -462,6 +467,7 @@ export default function ProductionPage() {
               <span>SKU</span>
               <input
                 autoCapitalize="characters"
+                data-testid="production-sku-input"
                 maxLength="32"
                 value={form.sku}
                 onChange={(event) => updateForm('sku', event.target.value)}
@@ -470,6 +476,7 @@ export default function ProductionPage() {
             <label>
               <span>Target blend price/kg</span>
               <input
+                data-testid="production-target-price-input"
                 min="0"
                 required
                 step="0.01"
@@ -484,6 +491,7 @@ export default function ProductionPage() {
             <label>
               <span>Packing/kg</span>
               <input
+                data-testid="production-packing-cost-input"
                 min="0"
                 step="0.01"
                 type="number"
@@ -494,6 +502,7 @@ export default function ProductionPage() {
             <label>
               <span>Labor</span>
               <input
+                data-testid="production-labor-cost-input"
                 min="0"
                 step="0.01"
                 type="number"
@@ -504,6 +513,7 @@ export default function ProductionPage() {
             <label>
               <span>Overhead</span>
               <input
+                data-testid="production-overhead-cost-input"
                 min="0"
                 step="0.01"
                 type="number"
@@ -520,7 +530,10 @@ export default function ProductionPage() {
                 {form.components.length ? 'Draft Ready' : 'Scan Bags'}
               </span>
             </div>
-            <div className="erp-table table-production-bags">
+            <div
+              className="erp-table table-production-bags"
+              data-testid="production-draft-bags-table"
+            >
               <div className="erp-row head">
                 <span>Raw Tea</span>
                 <span>Bags</span>
@@ -558,7 +571,7 @@ export default function ProductionPage() {
             </div>
           </div>
 
-          <button className="erp-button" type="submit">
+          <button className="erp-button" data-testid="production-create-blend-button" type="submit">
             Create Blend
           </button>
         </section>
@@ -567,7 +580,7 @@ export default function ProductionPage() {
           <div className="erp-panel-title">
             <h2>Price Prediction</h2>
           </div>
-          <dl className="erp-cost-list">
+          <dl className="erp-cost-list" data-testid="production-price-preview">
             <div>
               <dt>Batch kg</dt>
               <dd>{formatKg(preview.batchKg)}</dd>
@@ -647,12 +660,17 @@ export default function ProductionPage() {
             <label>
               <span>Paste QR payload or lot ID</span>
               <textarea
+                data-testid="production-qr-input"
                 rows="4"
                 value={qrText}
                 onChange={(event) => setQrText(event.target.value)}
               />
             </label>
-            <button className="erp-button secondary" type="submit">
+            <button
+              className="erp-button secondary"
+              data-testid="production-add-qr-button"
+              type="submit"
+            >
               <QrCode size={17} />
               Add QR Scan
             </button>
@@ -667,6 +685,7 @@ export default function ProductionPage() {
             <label>
               <span>Raw inventory lot</span>
               <select
+                data-testid="production-manual-lot-select"
                 required
                 value={manualForm.lotId}
                 onChange={(event) => selectManualLot(event.target.value)}
@@ -683,6 +702,7 @@ export default function ProductionPage() {
               <label>
                 <span>Bag size</span>
                 <select
+                  data-testid="production-manual-bag-size-select"
                   required
                   value={manualForm.bagSizeKg}
                   onChange={(event) =>
@@ -704,6 +724,7 @@ export default function ProductionPage() {
               <label>
                 <span>Bag count</span>
                 <input
+                  data-testid="production-manual-bag-count-input"
                   min="1"
                   max={manualAvailable || undefined}
                   required
@@ -722,7 +743,11 @@ export default function ProductionPage() {
             <p className="erp-muted-note">
               Available after current draft: {manualAvailable} bag(s)
             </p>
-            <button className="erp-button secondary" type="submit">
+            <button
+              className="erp-button secondary"
+              data-testid="production-add-manual-button"
+              type="submit"
+            >
               <Plus size={17} />
               Add From Inventory
             </button>
@@ -734,7 +759,7 @@ export default function ProductionPage() {
         <div className="erp-panel-title">
           <h2>Blended Batch Traceability</h2>
         </div>
-        <div className="erp-table table-production">
+        <div className="erp-table table-production" data-testid="production-batch-table">
           <div className="erp-row head">
             <span>Batch</span>
             <span>Stock</span>
@@ -743,7 +768,11 @@ export default function ProductionPage() {
             <span>Profit</span>
           </div>
           {data.blendBatches.map((batch) => (
-            <div className="erp-row" key={batch.id}>
+            <div
+              className="erp-row"
+              data-testid={`production-batch-row-${batch.id}`}
+              key={batch.id}
+            >
               <span>
                 <strong>{batch.productName}</strong>
                 <small>

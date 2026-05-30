@@ -38,11 +38,22 @@
       }
     },
     {
-      "files": ["scripts/**/*.js"],
+      "files": ["scripts/**/*.js", "scripts/**/*.mjs", "playwright.config.js"],
       "env": {
         "browser": false,
         "node": true,
         "es2022": true
+      }
+    },
+    {
+      "files": ["tests/e2e/**/*.js"],
+      "env": {
+        "browser": false,
+        "node": true,
+        "es2022": true
+      },
+      "rules": {
+        "react-hooks/rules-of-hooks": "off"
       }
     }
   ]

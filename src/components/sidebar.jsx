@@ -38,6 +38,7 @@ export default function Sidebar() {
           return (
             <NavLink
               className={({ isActive }) => (isActive ? 'app-nav-link active' : 'app-nav-link')}
+              data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
               end={item.to === '/'}
               key={item.to}
               to={item.to}

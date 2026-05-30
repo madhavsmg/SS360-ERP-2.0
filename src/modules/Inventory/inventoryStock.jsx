@@ -143,7 +143,7 @@ export default function InventoryStock() {
   }
 
   return (
-    <>
+    <div data-testid="inventory-stock-workspace">
       <div className="erp-summary-grid">
         <div className="erp-stat erp-kpi-stat stat-raw-stock">
           <span>Raw Stock</span>
@@ -171,7 +171,11 @@ export default function InventoryStock() {
         </div>
       </div>
 
-      {message && <p className="erp-message">{message}</p>}
+      {message && (
+        <p className="erp-message" data-testid="inventory-stock-message">
+          {message}
+        </p>
+      )}
 
       <div className="erp-workspace inventory-stock-workspace">
         <section className="erp-panel">
@@ -185,6 +189,7 @@ export default function InventoryStock() {
               <div className="erp-input-icon">
                 <Search size={16} />
                 <input
+                  data-testid="inventory-stock-search-input"
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                   placeholder="Lot, product, supplier, QR ID"
@@ -196,6 +201,7 @@ export default function InventoryStock() {
           <div className="erp-tabs" role="tablist" aria-label="Stock type">
             <button
               className={stockMode === 'raw' ? 'erp-tab active' : 'erp-tab'}
+              data-testid="inventory-tab-raw"
               type="button"
               onClick={() => setStockMode('raw')}
             >
@@ -203,6 +209,7 @@ export default function InventoryStock() {
             </button>
             <button
               className={stockMode === 'blend' ? 'erp-tab active' : 'erp-tab'}
+              data-testid="inventory-tab-blend"
               type="button"
               onClick={() => setStockMode('blend')}
             >
@@ -211,7 +218,7 @@ export default function InventoryStock() {
           </div>
 
           {stockMode === 'raw' ? (
-            <div className="erp-table table-inventory">
+            <div className="erp-table table-inventory" data-testid="inventory-raw-table">
               <div className="erp-row head">
                 <span>Raw Lot</span>
                 <span>Stock</span>
@@ -222,6 +229,7 @@ export default function InventoryStock() {
               {rawLots.map((lot) => (
                 <button
                   className="erp-row"
+                  data-testid={`inventory-raw-row-${lot.id}`}
                   key={lot.id}
                   type="button"
                   onClick={() => selectLabel('raw', lot.id)}
@@ -249,7 +257,7 @@ export default function InventoryStock() {
               {rawLots.length === 0 && <p className="erp-empty-state">No raw lots match.</p>}
             </div>
           ) : (
-            <div className="erp-table table-inventory">
+            <div className="erp-table table-inventory" data-testid="inventory-blend-table">
               <div className="erp-row head">
                 <span>Blended Batch</span>
                 <span>Stock</span>
@@ -260,6 +268,7 @@ export default function InventoryStock() {
               {blendBatches.map((batch) => (
                 <button
                   className="erp-row"
+                  data-testid={`inventory-blend-row-${batch.id}`}
                   key={batch.id}
                   type="button"
                   onClick={() => selectLabel('blend', batch.id)}
@@ -288,7 +297,12 @@ export default function InventoryStock() {
         <aside className="erp-panel erp-print-label">
           <div className="erp-panel-title">
             <h2>Selected QR</h2>
-            <button className="erp-button secondary" type="button" onClick={() => window.print()}>
+            <button
+              className="erp-button secondary"
+              data-testid="inventory-print-qr-button"
+              type="button"
+              onClick={() => window.print()}
+            >
               <Printer size={17} />
               Print
             </button>
@@ -315,7 +329,7 @@ export default function InventoryStock() {
                   </select>
                 </label>
               )}
-              <div className="erp-qr-box">
+              <div className="erp-qr-box" data-testid="inventory-selected-qr">
                 {qrImages[selectedQrKey] ? (
                   <img src={qrImages[selectedQrKey]} alt={`QR for ${selectedItem.id}`} />
                 ) : (
@@ -384,17 +398,22 @@ export default function InventoryStock() {
             <label>
               <span>Paste QR payload or item ID</span>
               <textarea
+                data-testid="inventory-qr-lookup-input"
                 rows="4"
                 value={lookupText}
                 onChange={(event) => setLookupText(event.target.value)}
               />
             </label>
-            <button className="erp-button secondary" type="submit">
+            <button
+              className="erp-button secondary"
+              data-testid="inventory-qr-match-button"
+              type="submit"
+            >
               Match QR
             </button>
           </form>
         </aside>
       </div>
-    </>
+    </div>
   );
 }

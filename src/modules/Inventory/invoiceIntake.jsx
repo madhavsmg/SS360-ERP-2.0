@@ -451,7 +451,7 @@ export default function InvoiceIntake() {
   }
 
   return (
-    <div className="erp-invoice-flow erp-no-print">
+    <div className="erp-invoice-flow erp-no-print" data-testid="inventory-intake-workspace">
       <div className="erp-workspace invoice-intake-workspace">
         <section className="erp-panel">
           <div className="erp-panel-title">
@@ -469,6 +469,7 @@ export default function InvoiceIntake() {
                 ref={fileInputRef}
                 accept="application/pdf,image/*"
                 className="erp-file-input"
+                data-testid="invoice-file-input"
                 disabled={isProcessing}
                 type="file"
                 onChange={(event) => processFile(event.target.files?.[0])}
@@ -476,6 +477,7 @@ export default function InvoiceIntake() {
             </label>
             <button
               className="erp-button secondary"
+              data-testid="invoice-camera-toggle"
               disabled={isProcessing}
               type="button"
               onClick={cameraStream ? closeCamera : openCamera}
@@ -483,7 +485,12 @@ export default function InvoiceIntake() {
               {cameraStream ? <X size={17} /> : <Camera size={17} />}
               {cameraStream ? 'Close Camera' : 'Open Camera'}
             </button>
-            <button className="erp-button secondary" type="button" onClick={requestClearDraft}>
+            <button
+              className="erp-button secondary"
+              data-testid="invoice-clear-draft-button"
+              type="button"
+              onClick={requestClearDraft}
+            >
               <ScanText size={17} />
               Clear Draft
             </button>
@@ -570,6 +577,7 @@ export default function InvoiceIntake() {
           <div className="inventory-action-stack">
             <button
               className="erp-button secondary"
+              data-testid="invoice-save-draft-button"
               disabled={isProcessing}
               type="button"
               onClick={saveDraft}
@@ -579,6 +587,7 @@ export default function InvoiceIntake() {
             </button>
             <button
               className="erp-button"
+              data-testid="invoice-approve-button"
               disabled={!canApprove || isProcessing}
               type="button"
               onClick={requestApproveDraft}
@@ -590,7 +599,11 @@ export default function InvoiceIntake() {
         </aside>
       </div>
 
-      {message && <p className="erp-message">{message}</p>}
+      {message && (
+        <p className="erp-message" data-testid="invoice-intake-message">
+          {message}
+        </p>
+      )}
 
       <section className="erp-panel">
         <div className="erp-panel-title">
@@ -605,6 +618,7 @@ export default function InvoiceIntake() {
             <span>Vendor</span>
             <input
               autoComplete="organization"
+              data-testid="invoice-vendor-name-input"
               maxLength="100"
               required
               value={draft.vendor.name}
@@ -615,6 +629,7 @@ export default function InvoiceIntake() {
             <span>GSTIN</span>
             <input
               autoCapitalize="characters"
+              data-testid="invoice-vendor-gstin-input"
               maxLength="15"
               pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]"
               placeholder="15-character GSTIN"
@@ -626,6 +641,7 @@ export default function InvoiceIntake() {
             <span>Phone</span>
             <input
               autoComplete="tel"
+              data-testid="invoice-vendor-phone-input"
               inputMode="numeric"
               maxLength="10"
               pattern="[6-9][0-9]{9}"
@@ -638,6 +654,7 @@ export default function InvoiceIntake() {
           <label>
             <span>Invoice No</span>
             <input
+              data-testid="invoice-number-input"
               maxLength="40"
               value={draft.invoice.number}
               onChange={(event) => updateDraft('invoice', 'number', event.target.value)}
@@ -646,6 +663,7 @@ export default function InvoiceIntake() {
           <label>
             <span>Invoice Date</span>
             <input
+              data-testid="invoice-date-input"
               type="date"
               max={today}
               value={draft.invoice.date}
@@ -655,6 +673,7 @@ export default function InvoiceIntake() {
           <label className="erp-wide-field">
             <span>Vendor Address</span>
             <input
+              data-testid="invoice-vendor-address-input"
               maxLength="240"
               value={draft.vendor.address}
               onChange={(event) => updateDraft('vendor', 'address', event.target.value)}
@@ -666,6 +685,7 @@ export default function InvoiceIntake() {
           <label>
             <span>Goods Amount</span>
             <input
+              data-testid="invoice-taxable-value-input"
               min="0"
               step="0.01"
               type="number"
@@ -676,6 +696,7 @@ export default function InvoiceIntake() {
           <label>
             <span>Cart/Coolie & Other Charges</span>
             <input
+              data-testid="invoice-misc-charges-input"
               min="0"
               step="0.01"
               type="number"
@@ -686,6 +707,7 @@ export default function InvoiceIntake() {
           <label>
             <span>CGST</span>
             <input
+              data-testid="invoice-cgst-input"
               min="0"
               step="0.01"
               type="number"
@@ -696,6 +718,7 @@ export default function InvoiceIntake() {
           <label>
             <span>SGST</span>
             <input
+              data-testid="invoice-sgst-input"
               min="0"
               step="0.01"
               type="number"
@@ -706,6 +729,7 @@ export default function InvoiceIntake() {
           <label>
             <span>IGST</span>
             <input
+              data-testid="invoice-igst-input"
               min="0"
               step="0.01"
               type="number"
@@ -716,6 +740,7 @@ export default function InvoiceIntake() {
           <label>
             <span>Invoice Value Before GST</span>
             <input
+              data-testid="invoice-gross-total-input"
               min="0"
               step="0.01"
               type="number"
@@ -726,6 +751,7 @@ export default function InvoiceIntake() {
           <label>
             <span>Payable Total</span>
             <input
+              data-testid="invoice-net-total-input"
               min="0"
               step="0.01"
               type="number"
@@ -762,6 +788,7 @@ export default function InvoiceIntake() {
                   <label>
                     <span>Description</span>
                     <input
+                      data-testid={`invoice-charge-${index}-label-input`}
                       maxLength="80"
                       value={charge.label}
                       onChange={(event) => updateCharge(index, 'label', event.target.value)}
@@ -770,6 +797,7 @@ export default function InvoiceIntake() {
                   <label>
                     <span>Amount</span>
                     <input
+                      data-testid={`invoice-charge-${index}-amount-input`}
                       min="0"
                       step="0.01"
                       type="number"
@@ -826,18 +854,21 @@ export default function InvoiceIntake() {
             <div className="erp-row invoice-row" key={item.id}>
               <span>
                 <input
+                  data-testid={`invoice-line-${index}-tea-name-input`}
                   maxLength="80"
                   placeholder="Tea name"
                   value={item.teaName}
                   onChange={(event) => updateItem(index, 'teaName', event.target.value)}
                 />
                 <input
+                  data-testid={`invoice-line-${index}-grade-input`}
                   maxLength="24"
                   placeholder="Grade"
                   value={item.grade}
                   onChange={(event) => updateItem(index, 'grade', event.target.value)}
                 />
                 <input
+                  data-testid={`invoice-line-${index}-bag-breakdown-input`}
                   maxLength="80"
                   placeholder="Bag breakup, e.g. 4 x 32, 3 x 21.5"
                   value={item.bagBreakdown || ''}
@@ -846,6 +877,7 @@ export default function InvoiceIntake() {
               </span>
               <span>
                 <input
+                  data-testid={`invoice-line-${index}-quantity-input`}
                   min="0"
                   step="0.01"
                   type="number"
@@ -855,6 +887,7 @@ export default function InvoiceIntake() {
               </span>
               <span>
                 <input
+                  data-testid={`invoice-line-${index}-unit-weight-input`}
                   min="0"
                   step="0.01"
                   type="number"
@@ -864,6 +897,7 @@ export default function InvoiceIntake() {
               </span>
               <span>
                 <input
+                  data-testid={`invoice-line-${index}-received-kg-input`}
                   min="0"
                   step="0.01"
                   type="number"
@@ -873,6 +907,7 @@ export default function InvoiceIntake() {
               </span>
               <span>
                 <input
+                  data-testid={`invoice-line-${index}-rate-input`}
                   min="0"
                   step="0.01"
                   type="number"
@@ -882,6 +917,7 @@ export default function InvoiceIntake() {
               </span>
               <span>
                 <input
+                  data-testid={`invoice-line-${index}-taxable-input`}
                   min="0"
                   step="0.01"
                   type="number"
@@ -891,6 +927,7 @@ export default function InvoiceIntake() {
               </span>
               <span>
                 <input
+                  data-testid={`invoice-line-${index}-cgst-input`}
                   min="0"
                   step="0.01"
                   type="number"
@@ -900,6 +937,7 @@ export default function InvoiceIntake() {
               </span>
               <span>
                 <input
+                  data-testid={`invoice-line-${index}-sgst-input`}
                   min="0"
                   step="0.01"
                   type="number"
@@ -909,6 +947,7 @@ export default function InvoiceIntake() {
               </span>
               <span>
                 <input
+                  data-testid={`invoice-line-${index}-igst-input`}
                   min="0"
                   step="0.01"
                   type="number"
@@ -918,6 +957,7 @@ export default function InvoiceIntake() {
               </span>
               <span>
                 <input
+                  data-testid={`invoice-line-${index}-line-total-input`}
                   min="0"
                   step="0.01"
                   type="number"
@@ -946,6 +986,7 @@ export default function InvoiceIntake() {
           <span className="erp-pill neutral">{draft.pageCount || 0} pages</span>
         </div>
         <textarea
+          data-testid="invoice-raw-text-input"
           rows="7"
           value={draft.rawText}
           onChange={(event) =>

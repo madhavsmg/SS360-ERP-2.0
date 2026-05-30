@@ -28,7 +28,7 @@ const inventoryTabs = [
 
 export default function InventoryPage() {
   return (
-    <section className="erp-page inventory-module">
+    <section className="erp-page inventory-module" data-testid="page-inventory">
       <header className="erp-header inventory-header">
         <div>
           <span className="erp-kicker">Inventory</span>
@@ -49,6 +49,9 @@ export default function InventoryPage() {
               className={({ isActive }) =>
                 isActive ? 'inventory-subnav-link active' : 'inventory-subnav-link'
               }
+              data-testid={`inventory-subnav-${item.label
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')}`}
               end={item.end}
               key={item.to}
               to={item.to}

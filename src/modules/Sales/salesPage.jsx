@@ -494,7 +494,7 @@ export default function SalesPage() {
   }
 
   return (
-    <section className="erp-page sales-module">
+    <section className="erp-page sales-module" data-testid="page-sales">
       <header className="erp-header">
         <div>
           <span className="erp-kicker">Sales</span>
@@ -506,7 +506,11 @@ export default function SalesPage() {
         </div>
       </header>
 
-      {message && <p className="erp-message">{message}</p>}
+      {message && (
+        <p className="erp-message" data-testid="sales-message">
+          {message}
+        </p>
+      )}
 
       <div className="erp-workspace sales-workspace">
         <div className="sales-main-column">
@@ -519,6 +523,7 @@ export default function SalesPage() {
               <label>
                 <span>Item type</span>
                 <select
+                  data-testid="sales-item-type-select"
                   value={cartForm.itemType}
                   onChange={(event) => {
                     updateCartForm('itemType', event.target.value);
@@ -534,6 +539,7 @@ export default function SalesPage() {
               <label className="sales-product-field">
                 <span>Product</span>
                 <select
+                  data-testid="sales-product-select"
                   value={cartForm.itemId}
                   onChange={(event) => {
                     const item = saleItems.find(
@@ -556,6 +562,7 @@ export default function SalesPage() {
                 <span>Quantity</span>
                 <div className="erp-input-suffix-wrap">
                   <input
+                    data-testid="sales-quantity-input"
                     min="0"
                     step="0.01"
                     type="number"
@@ -569,6 +576,7 @@ export default function SalesPage() {
               <label>
                 <span>Price / kg</span>
                 <input
+                  data-testid="sales-price-input"
                   min="0"
                   step="0.01"
                   type="number"
@@ -579,6 +587,7 @@ export default function SalesPage() {
 
               <button
                 className="erp-button sales-action sales-action-add sales-cart-button"
+                data-testid="sales-add-to-cart-button"
                 type="button"
                 onClick={addToCart}
               >
@@ -593,7 +602,7 @@ export default function SalesPage() {
               </p>
             )}
 
-            <div className="erp-table table-sales-cart">
+            <div className="erp-table table-sales-cart" data-testid="sales-cart-table">
               <div className="erp-row head">
                 <span>Product</span>
                 <span>Qty (kg)</span>
@@ -605,7 +614,7 @@ export default function SalesPage() {
                 <div className="erp-empty-state sales-cart-empty">No items in cart.</div>
               ) : (
                 cart.map((item) => (
-                  <div className="erp-row" key={item.id}>
+                  <div className="erp-row" data-testid={`sales-cart-row-${item.id}`} key={item.id}>
                     <span className="sales-cart-product">
                       <span className="sales-cart-product-copy">
                         <strong>{item.itemName}</strong>
@@ -672,7 +681,7 @@ export default function SalesPage() {
             <div className="erp-panel-title">
               <h2>Sales Register</h2>
             </div>
-            <div className="erp-table table-sales">
+            <div className="erp-table table-sales" data-testid="sales-register-table">
               <div className="erp-row head">
                 <span>Order</span>
                 <span>Kg</span>
@@ -684,7 +693,11 @@ export default function SalesPage() {
                 <div className="erp-empty-state">No sales recorded yet.</div>
               ) : (
                 data.salesOrders.map((order) => (
-                  <div className="erp-row" key={order.id}>
+                  <div
+                    className="erp-row"
+                    data-testid={`sales-order-row-${order.id}`}
+                    key={order.id}
+                  >
                     <span>
                       <strong>{order.itemName}</strong>
                       <small>
@@ -725,6 +738,7 @@ export default function SalesPage() {
                 <span>Phone lookup</span>
                 <input
                   autoComplete="tel"
+                  data-testid="sales-customer-phone-input"
                   inputMode="numeric"
                   maxLength="10"
                   pattern="[6-9][0-9]{9}"
@@ -736,6 +750,7 @@ export default function SalesPage() {
               </label>
               <button
                 className="erp-button sales-action sales-action-fetch"
+                data-testid="sales-fetch-customer-button"
                 type="button"
                 onClick={handleFetchCustomer}
               >
@@ -745,7 +760,9 @@ export default function SalesPage() {
             </div>
 
             {customerLookupMessage && (
-              <p className="sales-lookup-message">{customerLookupMessage}</p>
+              <p className="sales-lookup-message" data-testid="sales-lookup-message">
+                {customerLookupMessage}
+              </p>
             )}
 
             <div className="sales-customer-mode">
@@ -770,6 +787,7 @@ export default function SalesPage() {
                 <label>
                   <span>Customer</span>
                   <select
+                    data-testid="sales-customer-select"
                     required
                     value={selectedCustomerId}
                     onChange={(event) => selectCustomer(event.target.value)}
@@ -829,6 +847,7 @@ export default function SalesPage() {
                   <span>Name</span>
                   <input
                     autoComplete="name"
+                    data-testid="sales-new-customer-name-input"
                     maxLength="80"
                     placeholder="Customer name"
                     value={newCustomer.name}
@@ -839,6 +858,7 @@ export default function SalesPage() {
                   <span>Phone</span>
                   <input
                     autoComplete="tel"
+                    data-testid="sales-new-customer-phone-input"
                     inputMode="numeric"
                     maxLength="10"
                     pattern="[6-9][0-9]{9}"
@@ -852,6 +872,7 @@ export default function SalesPage() {
                   <span>City</span>
                   <input
                     autoComplete="address-level2"
+                    data-testid="sales-new-customer-city-input"
                     maxLength="60"
                     value={newCustomer.city}
                     onChange={(event) => updateNewCustomer('city', event.target.value)}
@@ -861,6 +882,7 @@ export default function SalesPage() {
                   <span>State</span>
                   <input
                     autoComplete="address-level1"
+                    data-testid="sales-new-customer-state-input"
                     maxLength="60"
                     placeholder="State"
                     value={newCustomer.state}
@@ -871,6 +893,7 @@ export default function SalesPage() {
                   <span>Address</span>
                   <textarea
                     autoComplete="street-address"
+                    data-testid="sales-new-customer-address-input"
                     maxLength="180"
                     placeholder="Customer address"
                     rows="2"
@@ -884,6 +907,7 @@ export default function SalesPage() {
             <label>
               <span>Payment mode</span>
               <select
+                data-testid="sales-payment-mode-select"
                 required
                 value={paymentMode}
                 onChange={(event) => setPaymentMode(event.target.value)}
@@ -904,6 +928,7 @@ export default function SalesPage() {
 
             <button
               className="erp-button sales-action sales-action-complete"
+              data-testid="sales-complete-sale-button"
               disabled={
                 cart.length === 0 ||
                 !paymentMode ||

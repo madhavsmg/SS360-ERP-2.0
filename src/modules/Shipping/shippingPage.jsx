@@ -55,7 +55,7 @@ export default function ShippingPage() {
   }
 
   return (
-    <section className="erp-page shipping-module">
+    <section className="erp-page shipping-module" data-testid="page-shipping">
       <header className="erp-header">
         <div>
           <span className="erp-kicker">Fulfillment</span>
@@ -64,14 +64,18 @@ export default function ShippingPage() {
         </div>
       </header>
 
-      {message && <p className="erp-message">{message}</p>}
+      {message && (
+        <p className="erp-message" data-testid="shipping-message">
+          {message}
+        </p>
+      )}
 
       <div className="erp-workspace shipping-workspace">
         <div className="erp-panel shipping-queue-panel">
           <div className="erp-panel-title">
             <h2>Shipment Queue</h2>
           </div>
-          <div className="erp-table table-shipping">
+          <div className="erp-table table-shipping" data-testid="shipping-queue-table">
             <div className="erp-row head">
               <span>Shipment</span>
               <span>Destination</span>
@@ -82,6 +86,7 @@ export default function ShippingPage() {
             {data.shipments.map((shipment) => (
               <button
                 className="erp-row"
+                data-testid={`shipping-row-${shipment.id}`}
                 key={shipment.id}
                 type="button"
                 onClick={() =>
@@ -114,13 +119,18 @@ export default function ShippingPage() {
           </div>
         </div>
 
-        <form className="erp-panel shipping-update-panel" onSubmit={submitShipment}>
+        <form
+          className="erp-panel shipping-update-panel"
+          data-testid="shipping-update-form"
+          onSubmit={submitShipment}
+        >
           <div className="erp-panel-title">
             <h2>Update Shipment</h2>
           </div>
           <label>
             <span>Shipment</span>
             <select
+              data-testid="shipping-shipment-select"
               required
               value={form.shipmentId}
               onChange={(event) => updateForm('shipmentId', event.target.value)}
@@ -136,6 +146,7 @@ export default function ShippingPage() {
           <label>
             <span>Status</span>
             <select
+              data-testid="shipping-status-select"
               value={form.status}
               onChange={(event) => updateForm('status', event.target.value)}
             >
@@ -147,6 +158,7 @@ export default function ShippingPage() {
           <label>
             <span>Transport mode</span>
             <input
+              data-testid="shipping-transport-input"
               maxLength="60"
               value={form.transportMode}
               onChange={(event) => updateForm('transportMode', event.target.value)}
@@ -156,6 +168,7 @@ export default function ShippingPage() {
             <span>Vehicle / LR number</span>
             <input
               autoCapitalize="characters"
+              data-testid="shipping-vehicle-input"
               maxLength="24"
               placeholder="Vehicle or LR number"
               value={form.vehicleNo}
@@ -165,12 +178,13 @@ export default function ShippingPage() {
           <label>
             <span>Note</span>
             <input
+              data-testid="shipping-note-input"
               maxLength="120"
               value={form.note}
               onChange={(event) => updateForm('note', event.target.value)}
             />
           </label>
-          <button className="erp-button" type="submit">
+          <button className="erp-button" data-testid="shipping-update-submit" type="submit">
             Update Delivery
           </button>
         </form>

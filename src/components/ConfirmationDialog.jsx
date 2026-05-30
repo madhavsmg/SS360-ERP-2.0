@@ -62,11 +62,17 @@ function ConfirmationDialog({
   }, [onCancel]);
 
   return (
-    <div className="erp-confirm-backdrop" role="presentation" onMouseDown={onCancel}>
+    <div
+      className="erp-confirm-backdrop"
+      data-testid="confirmation-backdrop"
+      role="presentation"
+      onMouseDown={onCancel}
+    >
       <section
         aria-labelledby="erp-confirm-title"
         aria-modal="true"
         className={`erp-confirm-dialog ${tone === 'danger' ? 'danger' : ''}`}
+        data-testid="confirmation-dialog"
         role="dialog"
         onMouseDown={(event) => event.stopPropagation()}
       >
@@ -88,11 +94,17 @@ function ConfirmationDialog({
           )}
         </div>
         <div className="erp-confirm-actions">
-          <button className="erp-button secondary" type="button" onClick={onCancel}>
+          <button
+            className="erp-button secondary"
+            data-testid="confirmation-cancel"
+            type="button"
+            onClick={onCancel}
+          >
             Cancel
           </button>
           <button
             className={tone === 'danger' ? 'erp-button secondary danger' : 'erp-button'}
+            data-testid="confirmation-confirm"
             type="button"
             onClick={onConfirm}
           >
