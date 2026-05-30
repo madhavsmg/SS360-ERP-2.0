@@ -1,8 +1,7 @@
 {
-  "experimentalServices": {
-    "frontend": {
-      "rootDirectory": ".",
-      "framework": "vite"
-    }
-  }
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "installCommand": "npm ci",
+  "outputDirectory": "dist"
 }
