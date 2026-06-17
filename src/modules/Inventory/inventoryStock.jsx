@@ -3,6 +3,7 @@ import { Printer, QrCode as QrCodeIcon, Search } from 'lucide-react';
 import QRCode from 'qrcode';
 import { useEnterprise } from '../../context/EnterpriseContext';
 import { formatKg, formatMoney } from '../../utils/formatters';
+import { getMessageClassName } from '../../utils/messageTone';
 import { buildStockQrPayload, getBagOptionLabel, readQrValue } from '../../utils/qrPayloads';
 
 export default function InventoryStock() {
@@ -172,7 +173,7 @@ export default function InventoryStock() {
       </div>
 
       {message && (
-        <p className="erp-message" data-testid="inventory-stock-message">
+        <p className={getMessageClassName(message)} data-testid="inventory-stock-message">
           {message}
         </p>
       )}

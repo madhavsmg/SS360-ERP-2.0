@@ -45,6 +45,7 @@ test.describe('@regression @workflow production, sales, and shipping', () => {
     await page.getByTestId('sales-price-input').fill('240');
     await page.getByTestId('sales-add-to-cart-button').click();
     await expect(page.getByTestId('sales-message')).toContainText('Only');
+    await expect(page.getByTestId('sales-message')).toHaveClass(/erp-message--warning/);
 
     await page.getByTestId('sales-quantity-input').fill('5');
     await page.getByTestId('sales-add-to-cart-button').click();
@@ -61,6 +62,22 @@ test.describe('@regression @workflow production, sales, and shipping', () => {
       expect(batch.remainingKg).toBe(85);
       expect(state.shipments[0].status).toBe('Packed');
     });
+  });
+
+  test('opens new customer mode with a warning for an invalid phone lookup', async ({ page }) => {
+    await page.goto('/sales');
+
+    await page.getByTestId('sales-customer-phone-input').fill('3317011565');
+    await page.getByTestId('sales-fetch-customer-button').click();
+
+    const lookupMessage = page.getByTestId('sales-lookup-message');
+    await expect(lookupMessage).toContainText(
+      'Customer phone must be a valid 10-digit Indian mobile number.'
+    );
+    await expect(lookupMessage).toHaveClass(/sales-lookup-message--warning/);
+    await expect(page.getByRole('button', { name: 'New' })).toHaveClass(/active/);
+    await expect(page.getByTestId('sales-new-customer-phone-input')).toHaveValue('3317011565');
+    await expect(page.getByTestId('sales-customer-select')).toHaveCount(0);
   });
 
   test('@destructive dispatches a packed shipment and syncs order status', async ({ page }) => {

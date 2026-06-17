@@ -13,6 +13,7 @@ import {
   sanitizeIndianMobileInput,
   validateOptionalIndianMobile,
 } from '../../utils/businessValidation';
+import { getMessageClassName } from '../../utils/messageTone';
 
 const cartItemDefaults = {
   itemType: 'blend',
@@ -44,6 +45,7 @@ export default function SalesPage() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [customerLookupMessage, setCustomerLookupMessage] = useState('');
+  const [customerLookupTone, setCustomerLookupTone] = useState('info');
   const [customerMode, setCustomerMode] = useState('existing');
   const [newCustomer, setNewCustomer] = useState(newCustomerDefaults);
   const [cartForm, setCartForm] = useState(cartItemDefaults);
@@ -115,6 +117,15 @@ export default function SalesPage() {
     }
   }
 
+  function showCustomerLookupMessage(message, tone = 'info') {
+    setCustomerLookupMessage(message);
+    setCustomerLookupTone(tone);
+  }
+
+  function clearCustomerLookupMessage() {
+    showCustomerLookupMessage('');
+  }
+
   function getReservedCartKg(itemType, itemId) {
     return cart.reduce(
       (sum, item) =>
@@ -144,7 +155,7 @@ export default function SalesPage() {
 
     setSelectedCustomerId(customerId);
     setCustomerPhone(customer?.phone || '');
-    setCustomerLookupMessage('');
+    clearCustomerLookupMessage();
     setCustomerMode('existing');
   }
 
@@ -160,8 +171,19 @@ export default function SalesPage() {
   function handleFetchCustomer() {
     const phoneError = validateOptionalIndianMobile(customerPhone, 'Customer phone');
 
-    if (!customerPhone || phoneError) {
-      setCustomerLookupMessage('Enter a valid phone number to fetch a customer.');
+    if (!customerPhone) {
+      showCustomerLookupMessage('Enter a valid phone number to fetch a customer.', 'warning');
+      return;
+    }
+
+    if (phoneError) {
+      setSelectedCustomerId('');
+      setCustomerMode('new');
+      setNewCustomer((current) => ({
+        ...(customerMode === 'new' ? current : newCustomerDefaults),
+        phone: customerPhone,
+      }));
+      showCustomerLookupMessage(`${phoneError} New customer mode opened.`, 'warning');
       return;
     }
 
@@ -171,7 +193,7 @@ export default function SalesPage() {
       setSelectedCustomerId(customer.id);
       setCustomerMode('existing');
       setNewCustomer(newCustomerDefaults);
-      setCustomerLookupMessage(
+      showCustomerLookupMessage(
         `Customer found: ${customer.name}. Existing tab opened with saved details.`
       );
     } else {
@@ -181,14 +203,14 @@ export default function SalesPage() {
         ...newCustomerDefaults,
         phone: normalizeIndianMobile(customerPhone),
       });
-      setCustomerLookupMessage('Customer not found.');
+      showCustomerLookupMessage('Customer not found. New customer mode opened.', 'warning');
     }
   }
 
   function useNewCustomerMode() {
     setSelectedCustomerId('');
     setCustomerMode('new');
-    setCustomerLookupMessage('');
+    clearCustomerLookupMessage();
     setNewCustomer((current) => ({
       ...current,
       phone: current.phone || customerPhone,
@@ -197,7 +219,7 @@ export default function SalesPage() {
 
   function useExistingCustomerMode() {
     setCustomerMode('existing');
-    setCustomerLookupMessage('');
+    clearCustomerLookupMessage();
   }
 
   function addToCart() {
@@ -507,7 +529,7 @@ export default function SalesPage() {
       </header>
 
       {message && (
-        <p className="erp-message" data-testid="sales-message">
+        <p className={getMessageClassName(message)} data-testid="sales-message">
           {message}
         </p>
       )}
@@ -760,7 +782,10 @@ export default function SalesPage() {
             </div>
 
             {customerLookupMessage && (
-              <p className="sales-lookup-message" data-testid="sales-lookup-message">
+              <p
+                className={`sales-lookup-message sales-lookup-message--${customerLookupTone}`}
+                data-testid="sales-lookup-message"
+              >
                 {customerLookupMessage}
               </p>
             )}

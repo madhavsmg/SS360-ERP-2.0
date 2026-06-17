@@ -23,6 +23,7 @@ import {
   extractInvoiceWithBackend,
   LOCAL_OCR_SERVICE_MESSAGE,
 } from '../../utils/invoiceBackendClient';
+import { getMessageClassName } from '../../utils/messageTone';
 
 function progressLabel(progress) {
   if (!progress) {
@@ -600,7 +601,7 @@ export default function InvoiceIntake() {
       </div>
 
       {message && (
-        <p className="erp-message" data-testid="invoice-intake-message">
+        <p className={getMessageClassName(message)} data-testid="invoice-intake-message">
           {message}
         </p>
       )}

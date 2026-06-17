@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useConfirmationDialog } from '../../components/ConfirmationDialog';
 import { useEnterprise } from '../../context/EnterpriseContext';
 import { formatKg, formatMoney } from '../../utils/formatters';
+import { getMessageClassName } from '../../utils/messageTone';
 
 const registerTabs = [
   { id: 'drafts', label: 'Drafts' },
@@ -191,7 +192,7 @@ export default function InvoiceRegister() {
       </div>
 
       {message && (
-        <p className="erp-message" data-testid="invoice-register-message">
+        <p className={getMessageClassName(message)} data-testid="invoice-register-message">
           {message}
         </p>
       )}
@@ -381,7 +382,7 @@ function InvoiceDetail({
       </dl>
 
       {reversalBlockers.length > 0 && invoice.status === 'Approved' && (
-        <div className="erp-message inventory-warning">
+        <div className="erp-message erp-message--warning inventory-warning">
           <AlertTriangle size={17} />
           <span>{reversalBlockers.join(' ')}</span>
         </div>

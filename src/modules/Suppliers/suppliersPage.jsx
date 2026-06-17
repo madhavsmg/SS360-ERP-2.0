@@ -12,6 +12,7 @@ import {
   validatePaymentTermDays,
 } from '../../utils/businessValidation';
 import { formatKg, formatMoney } from '../../utils/formatters';
+import { getMessageClassName } from '../../utils/messageTone';
 
 const supplierFormDefaults = {
   name: '',
@@ -288,7 +289,7 @@ export default function SuppliersPage() {
       </div>
 
       {message && (
-        <p className="erp-message" data-testid="supplier-message">
+        <p className={getMessageClassName(message)} data-testid="supplier-message">
           {message}
         </p>
       )}

@@ -6,6 +6,7 @@ import {
   validateOptionalIndianMobile,
 } from '../../utils/businessValidation';
 import { formatKg, formatMoney } from '../../utils/formatters';
+import { getMessageClassName } from '../../utils/messageTone';
 
 const customerDefaults = {
   name: '',
@@ -145,7 +146,7 @@ export default function CustomersPage() {
       </header>
 
       {message && (
-        <p className="erp-message" data-testid="customer-message">
+        <p className={getMessageClassName(message)} data-testid="customer-message">
           {message}
         </p>
       )}

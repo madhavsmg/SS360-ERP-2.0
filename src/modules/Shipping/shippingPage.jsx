@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useConfirmationDialog } from '../../components/ConfirmationDialog';
 import { useEnterprise } from '../../context/EnterpriseContext';
+import { getMessageClassName } from '../../utils/messageTone';
 
 const updateDefaults = {
   shipmentId: '',
@@ -65,7 +66,7 @@ export default function ShippingPage() {
       </header>
 
       {message && (
-        <p className="erp-message" data-testid="shipping-message">
+        <p className={getMessageClassName(message)} data-testid="shipping-message">
           {message}
         </p>
       )}

@@ -3,6 +3,7 @@ import { Camera, Plus, QrCode, Trash2, X } from 'lucide-react';
 import { useConfirmationDialog } from '../../components/ConfirmationDialog';
 import { useEnterprise } from '../../context/EnterpriseContext';
 import { formatKg, formatMoney, formatPercent } from '../../utils/formatters';
+import { getMessageClassName } from '../../utils/messageTone';
 import { getBagOptionLabel, readQrValue } from '../../utils/qrPayloads';
 
 const blendDefaults = {
@@ -433,7 +434,7 @@ export default function ProductionPage() {
       </div>
 
       {message && (
-        <p className="erp-message" data-testid="production-message">
+        <p className={getMessageClassName(message)} data-testid="production-message">
           {message}
         </p>
       )}
