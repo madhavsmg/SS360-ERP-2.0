@@ -46,14 +46,14 @@
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.27.0",
-    "@vitejs/plugin-react-swc": "^3.8.0",
+    "@playwright/test": "^1.55.0",
+    "@vitejs/plugin-react-swc": "^4.3.1",
     "eslint": "^8.57.0",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "pdf-parse": "^2.4.5",
     "prettier": "^3.5.3",
-    "@playwright/test": "^1.55.0",
-    "vite": "^6.3.1"
+    "vite": "^8.0.16"
   }
 }
